@@ -7,8 +7,9 @@
   <link rel="stylesheet" href="css/main.css">
   <!-- Font Awesome CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <!-- Chart.js CDN -->
+  <!-- Chart.js CDN — harus di <head> agar tersedia saat live.js diparse -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Font Awesome sudah ada di atas, hapus duplikat di bawah bila ada -->
 </head>
 <body>
 
@@ -136,16 +137,7 @@
               <tr><td>EEPROM Size</td><td id="ecu-eeprom">—</td></tr>
               <tr><td>Checksum</td><td id="ecu-chk">—</td></tr>
             </table>
-            <button class="btn btn-primary btn-sm" style="margin-top:12px"
-              onclick="API.readId().then(d=>{
-                document.getElementById('ecu-mfr').textContent=d.manufacturer||'—';
-                document.getElementById('ecu-part').textContent=d.partNumber||'—';
-                document.getElementById('ecu-fw').textContent=d.fwVersion||'—';
-                document.getElementById('ecu-hw').textContent=d.hwVersion||'—';
-                document.getElementById('ecu-proto').textContent=d.protocol||'—';
-                document.getElementById('ecu-eeprom').textContent=(d.eepromSize||0)+' bytes';
-                document.getElementById('ecu-chk').textContent='0x'+((d.checksum||0).toString(16).toUpperCase());
-              }).catch(e=>App.toast('error','Read ID Failed',e.message))">
+            <button class="btn btn-primary btn-sm" style="margin-top:12px" id="btn-read-ecu-id">
               <i class="fa fa-id-card"></i> Read ECU ID
             </button>
           </div>
@@ -250,7 +242,7 @@
               <option value="">-- Select --</option>
             </select>
           </div>
-          <div id="backup-progress-wrap2" style="margin-bottom:12px">
+          <div id="restore-progress-wrap" style="margin-bottom:12px">
             <div class="progress-bar-wrap"><div class="progress-bar-fill" id="restore-progress-bar" style="width:0%"></div></div>
             <div style="font-size:12px;color:var(--text-secondary);margin-top:4px" id="restore-progress-label"></div>
           </div>
@@ -310,28 +302,14 @@
         <div class="card">
           <div class="card-title"><i class="fa fa-file-lines"></i> Session Logger</div>
           <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-            <button class="btn btn-success btn-sm" id="btn-log-start"
-              onclick="API.startLog().then(r=>App.toast('success','Logging started',r.file)).catch(e=>App.toast('error','Error',e.message))">
+            <button class="btn btn-success btn-sm" id="btn-log-start">
               <i class="fa fa-circle"></i> Start Log
             </button>
-            <button class="btn btn-danger btn-sm"
-              onclick="API.stopLog().then(()=>App.toast('info','Log stopped','')).catch(e=>App.toast('error','Error',e.message))">
+            <button class="btn btn-danger btn-sm" id="btn-log-stop">
               <i class="fa fa-stop"></i> Stop Log
             </button>
             <a href="/api/log/export" class="btn btn-secondary btn-sm">⬇ Export CSV</a>
-            <button class="btn btn-secondary btn-sm"
-              onclick="API.log(100).then(r=>{
-                const el=document.getElementById('log-output');
-                el.innerHTML='';
-                (r.logs||[]).forEach(l=>{
-                  const d=document.createElement('div');
-                  d.style.cssText='font-family:monospace;font-size:12px;padding:1px 0';
-                  const colors={INF:'#22c55e',WRN:'#f59e0b',ERR:'#ef4444',DBG:'#8a91a8'};
-                  d.innerHTML=\`<span style='color:var(--text-muted)'>[&dollar;{(l.ts/1000).toFixed(3)}]</span> <span style='color:&dollar;{colors[l.level]||\"#f0f2f8\"}'>&dollar;{l.level}</span> [&dollar;{l.tag}] &dollar;{l.msg}\`;
-                  el.appendChild(d);
-                });
-                el.scrollTop=el.scrollHeight;
-              })">
+            <button class="btn btn-secondary btn-sm" id="btn-log-refresh">
               🔄 Refresh
             </button>
           </div>
@@ -487,12 +465,92 @@
 
 <!-- Scripts -->
 <script src="js/api.js"></script>
-<script src="js/dashboard.js"></script>
 <script src="js/live.js"></script>
 <script src="js/dtc.js"></script>
 <script src="js/backup.js"></script>
 <script src="js/terminal.js"></script>
 <script src="js/settings.js"></script>
+<!-- dashboard.js terakhir karena App.init() memanggil Live, Diag, BackupUI, Terminal, SettingsUI -->
+<script src="js/dashboard.js"></script>
+
+<script>
+// Wire up buttons that can't be bound inside module scripts
+document.addEventListener('DOMContentLoaded', () => {
+
+  // ---- Read ECU ID (Vehicle page) ----
+  const btnReadId = document.getElementById('btn-read-ecu-id');
+  if (btnReadId) {
+    btnReadId.addEventListener('click', () => {
+      btnReadId.disabled = true;
+      btnReadId.textContent = 'Reading…';
+      API.readId()
+        .then(d => {
+          const set = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+          };
+          set('ecu-mfr',   d.manufacturer || '—');
+          set('ecu-part',  d.partNumber   || '—');
+          set('ecu-fw',    d.fwVersion    || '—');
+          set('ecu-hw',    d.hwVersion    || '—');
+          set('ecu-proto', d.protocol     || '—');
+          set('ecu-eeprom',(d.eepromSize  || 0) + ' bytes');
+          set('ecu-chk',   '0x' + ((d.checksum || 0).toString(16).toUpperCase()));
+          App.toast('success', 'ECU ID Read', d.partNumber || 'OK');
+        })
+        .catch(e => App.toast('error', 'Read ID Failed', e.message))
+        .finally(() => {
+          btnReadId.disabled = false;
+          btnReadId.innerHTML = '<i class="fa fa-id-card"></i> Read ECU ID';
+        });
+    });
+  }
+
+  // ---- Logger page buttons ----
+  const btnLogStart   = document.getElementById('btn-log-start');
+  const btnLogStop    = document.getElementById('btn-log-stop');
+  const btnLogRefresh = document.getElementById('btn-log-refresh');
+  const logOutput     = document.getElementById('log-output');
+
+  if (btnLogStart) {
+    btnLogStart.addEventListener('click', () => {
+      API.startLog()
+        .then(r => App.toast('success', 'Logging started', r.file || ''))
+        .catch(e => App.toast('error', 'Error', e.message));
+    });
+  }
+
+  if (btnLogStop) {
+    btnLogStop.addEventListener('click', () => {
+      API.stopLog()
+        .then(() => App.toast('info', 'Log stopped', ''))
+        .catch(e => App.toast('error', 'Error', e.message));
+    });
+  }
+
+  if (btnLogRefresh) {
+    btnLogRefresh.addEventListener('click', () => {
+      API.log(100).then(r => {
+        if (!logOutput) return;
+        logOutput.innerHTML = '';
+        const colors = { INF: '#22c55e', WRN: '#f59e0b', ERR: '#ef4444', DBG: '#8a91a8' };
+        (r.logs || []).forEach(l => {
+          const d = document.createElement('div');
+          d.style.cssText = 'font-family:monospace;font-size:12px;padding:1px 0';
+          const ts    = (l.ts / 1000).toFixed(3);
+          const color = colors[l.level] || '#f0f2f8';
+          d.innerHTML =
+            `<span style="color:var(--text-muted)">[${ts}]</span> ` +
+            `<span style="color:${color}">${l.level}</span> ` +
+            `[${l.tag}] ${l.msg}`;
+          logOutput.appendChild(d);
+        });
+        logOutput.scrollTop = logOutput.scrollHeight;
+      }).catch(e => App.toast('error', 'Error', e.message));
+    });
+  }
+});
+</script>
 
 <style>
   .page-section { display: none; }

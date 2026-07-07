@@ -58,6 +58,15 @@ const BackupUI = (() => {
     }
   }
 
+  function _setRestoreProgress(pct, msg) {
+    const bar   = document.getElementById('restore-progress-bar');
+    const label = document.getElementById('restore-progress-label');
+    const wrap  = document.getElementById('restore-progress-wrap');
+    if (wrap)  wrap.style.display = 'block';
+    if (bar)   bar.style.width = pct + '%';
+    if (label) label.textContent = `${pct}% — ${msg}`;
+  }
+
   async function startRestore() {
     const sel = document.getElementById('restore-file-select');
     if (!sel || !sel.value) { App.toast('warning', 'Select a file first', ''); return; }
@@ -65,13 +74,14 @@ const BackupUI = (() => {
 
     const btn = document.getElementById('btn-start-restore');
     if (btn) { btn.disabled = true; btn.textContent = 'Comparing…'; }
-    _setProgress(0, 'Starting comparison…');
+    _setRestoreProgress(0, 'Starting comparison…');
     try {
-      API.onWS('restore_progress', (msg) => _setProgress(msg.progress, msg.message));
+      API.onWS('restore_progress', (msg) => _setRestoreProgress(msg.progress, msg.message));
       await API.restore(sel.value);
-      _setProgress(100, 'Simulation done');
+      _setRestoreProgress(100, 'Simulation done');
       App.toast('info', 'Restore Simulation', 'Check logs for comparison result');
     } catch (e) {
+      _setRestoreProgress(0, 'Failed');
       App.toast('error', 'Restore Failed', e.message);
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '🔄 Simulate Restore'; }
