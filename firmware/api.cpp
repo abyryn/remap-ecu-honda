@@ -8,9 +8,10 @@
 #include "include/backup.h"
 #include "include/filesystem.h"
 #include "include/ota.h"
-#include "include/settings.h"
-#include "include/utils.h"
 #include "include/config.h"
+#include "include/flash_manager.h"
+#include "include/map_manager.h"
+#include "include/webserver.h"
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
@@ -201,6 +202,74 @@ void APIHandler::registerRoutes(AsyncWebServer& server) {
             handleOTAUpload(req, filename, idx, data, len, final);
         }
     );
+
+    // ---- GET /api/maps ----
+    server.on("/api/maps", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        handleMapsList(req);
+    });
+
+    // ---- GET /api/map ----
+    server.on("/api/map", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        handleMapGet(req);
+    });
+
+    // ---- POST /api/map ----
+    server.on("/api/map", HTTP_POST,
+        [this](AsyncWebServerRequest* req) {},
+        nullptr,
+        [this](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t idx, size_t tot) {
+            if (!_checkAuth(req)) return;
+            handleMapUpdate(req, data, len, idx, tot);
+        }
+    );
+
+    // ---- POST /api/ecu/read ----
+    server.on("/api/ecu/read", HTTP_POST,
+        [this](AsyncWebServerRequest* req) {},
+        nullptr,
+        [this](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t idx, size_t tot) {
+            if (!_checkAuth(req)) return;
+            handleEcuRead(req, data, len, idx, tot);
+        }
+    );
+
+    // ---- POST /api/ecu/write ----
+    server.on("/api/ecu/write", HTTP_POST,
+        [this](AsyncWebServerRequest* req) {},
+        nullptr,
+        [this](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t idx, size_t tot) {
+            if (!_checkAuth(req)) return;
+            handleEcuWrite(req, data, len, idx, tot);
+        }
+    );
+
+    // ---- POST /api/ecu/erase ----
+    server.on("/api/ecu/erase", HTTP_POST, [this](AsyncWebServerRequest* req) {
+        if (!_checkAuth(req)) return;
+        handleEcuErase(req);
+    });
+
+    // ---- POST /api/ecu/verify ----
+    server.on("/api/ecu/verify", HTTP_POST,
+        [this](AsyncWebServerRequest* req) {},
+        nullptr,
+        [this](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t idx, size_t tot) {
+            if (!_checkAuth(req)) return;
+            handleEcuVerify(req, data, len, idx, tot);
+        }
+    );
+
+    // ---- POST /api/ecu/reset ----
+    server.on("/api/ecu/reset", HTTP_POST, [this](AsyncWebServerRequest* req) {
+        if (!_checkAuth(req)) return;
+        handleEcuReset(req);
+    });
+
+    // ---- POST /api/recovery ----
+    server.on("/api/recovery", HTTP_POST, [this](AsyncWebServerRequest* req) {
+        if (!_checkAuth(req)) return;
+        handleRecovery(req);
+    });
 
     Logger.log(LOG_INFO, "API", "All routes registered");
 }
@@ -448,4 +517,163 @@ void APIHandler::handleOTAUpload(AsyncWebServerRequest* req,
     if (final) {
         OTA.end();  // triggers reboot
     }
+}
+
+// ============================================================
+// Map Handlers
+// ============================================================
+void APIHandler::handleMapsList(AsyncWebServerRequest* req) {
+    if (!ECU.isConnected()) { sendError(req, 503, "ECU not connected"); return; }
+    if (!MapMgr.hasLayout()) {
+        MapMgr.loadLayout(ECU.getModel(), ECU.getInfo().partNumber);
+    }
+    sendOK(req, MapMgr.getMapListJson());
+}
+
+void APIHandler::handleMapGet(AsyncWebServerRequest* req) {
+    if (!req->hasParam("name")) { sendError(req, 400, "Map name required"); return; }
+    String name = req->getParam("name")->value();
+    
+    if (Flash.getBuffer().empty()) {
+        sendError(req, 404, "No flash data loaded. Read ECU first.");
+        return;
+    }
+    
+    String mapJson = MapMgr.getMapDataJson(name, Flash.getBuffer());
+    if (mapJson.indexOf("error") != -1) {
+        sendError(req, 404, mapJson);
+    } else {
+        sendOK(req, mapJson);
+    }
+}
+
+void APIHandler::handleMapUpdate(AsyncWebServerRequest* req,
+                                  uint8_t* data, size_t len, size_t index, size_t total) {
+    if (index == 0) {
+        if (!req->hasParam("name")) { sendError(req, 400, "Map name required"); return; }
+        String name = req->getParam("name")->value();
+        
+        String json = String((char*)data).substring(0, len);
+        bool ok = MapMgr.updateMapData(name, json, Flash.getBufferRef());
+        
+        if (ok) sendOK(req, "{\"status\":\"updated\"}");
+        else    sendError(req, 500, "Map update failed");
+    }
+}
+
+// ============================================================
+// Flash Handlers
+// ============================================================
+void APIHandler::handleEcuRead(AsyncWebServerRequest* req,
+                               uint8_t* data, size_t len, size_t index, size_t total) {
+    if (index == 0) {
+        if (Flash.isOperationActive()) {
+            sendError(req, 409, "Flash operation in progress");
+            return;
+        }
+        
+        StaticJsonDocument<128> doc;
+        deserializeJson(doc, data, len);
+        String type = doc["type"] | "full";
+        
+        auto cb = [](const FlashProgress& p) {
+            WebSrv.broadcastWS(Flash.progressToJson());
+        };
+        
+        FlashResult r = FLASH_OK;
+        if (type == "eeprom") r = Flash.readEEPROM(cb);
+        else if (type == "calibration") r = Flash.readCalibration(cb);
+        else r = Flash.readFullFlash(0, cb);
+        
+        if (r == FLASH_OK) {
+            sendOK(req, "{\"status\":\"started\"}");
+        } else {
+            sendError(req, 500, Flash.resultToString(r));
+        }
+    }
+}
+
+void APIHandler::handleEcuWrite(AsyncWebServerRequest* req,
+                                uint8_t* data, size_t len, size_t index, size_t total) {
+    if (index == 0) {
+        if (Flash.isOperationActive()) {
+            sendError(req, 409, "Flash operation in progress");
+            return;
+        }
+        
+        StaticJsonDocument<128> doc;
+        deserializeJson(doc, data, len);
+        String type = doc["type"] | "calibration";
+        bool autoBackup = doc["autoBackup"] | true;
+        
+        if (Flash.getBuffer().empty()) {
+            sendError(req, 400, "No data in flash buffer");
+            return;
+        }
+        
+        auto cb = [](const FlashProgress& p) {
+            WebSrv.broadcastWS(Flash.progressToJson());
+        };
+        
+        FlashResult r = FLASH_OK;
+        if (type == "full") {
+            r = Flash.writeFullFlash(Flash.getBuffer().data(), Flash.getBufferSize(), autoBackup, cb);
+        } else {
+            r = Flash.writeCalibration(Flash.getBuffer().data(), Flash.getBufferSize(), autoBackup, cb);
+        }
+        
+        if (r == FLASH_OK) {
+            sendOK(req, "{\"status\":\"started\"}");
+        } else {
+            sendError(req, 500, Flash.resultToString(r));
+        }
+    }
+}
+
+void APIHandler::handleEcuErase(AsyncWebServerRequest* req) {
+    if (Flash.isOperationActive()) { sendError(req, 409, "Busy"); return; }
+    
+    auto cb = [](const FlashProgress& p) {
+        WebSrv.broadcastWS(Flash.progressToJson());
+    };
+    
+    FlashResult r = Flash.eraseFlash(cb);
+    if (r == FLASH_OK) sendOK(req, "{\"status\":\"started\"}");
+    else sendError(req, 500, Flash.resultToString(r));
+}
+
+void APIHandler::handleEcuVerify(AsyncWebServerRequest* req,
+                                 uint8_t* data, size_t len, size_t index, size_t total) {
+    if (index == 0) {
+        if (Flash.isOperationActive()) { sendError(req, 409, "Busy"); return; }
+        if (Flash.getBuffer().empty()) { sendError(req, 400, "Buffer empty"); return; }
+        
+        auto cb = [](const FlashProgress& p) {
+            WebSrv.broadcastWS(Flash.progressToJson());
+        };
+        
+        FlashResult r = Flash.verifyFlash(Flash.getBuffer().data(), Flash.getBufferSize(), cb);
+        if (r == FLASH_OK) sendOK(req, "{\"status\":\"started\"}");
+        else sendError(req, 500, Flash.resultToString(r));
+    }
+}
+
+void APIHandler::handleEcuReset(AsyncWebServerRequest* req) {
+    // Basic hard reset via RoutineControl or specialized reset command
+    // FlashManager does this internally during reboot.
+    // For manual reset, we can just disconnect.
+    ECU.disconnect();
+    sendOK(req, "{\"status\":\"reset\"}");
+}
+
+void APIHandler::handleRecovery(AsyncWebServerRequest* req) {
+    if (Flash.isOperationActive()) { sendError(req, 409, "Busy"); return; }
+    
+    auto cb = [](const FlashProgress& p) {
+        WebSrv.broadcastWS(Flash.progressToJson());
+    };
+    
+    FlashResult r = Flash.startRecovery(cb);
+    if (r == FLASH_OK) sendOK(req, "{\"status\":\"started\"}");
+    else sendError(req, 500, Flash.resultToString(r));
 }

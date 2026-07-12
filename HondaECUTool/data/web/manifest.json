@@ -1,0 +1,36 @@
+{
+  "short_name": "Honda ECU",
+  "name": "Honda ECU Tool — K-Line Diagnostic",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/mobile.html",
+  "scope": "/",
+  "background_color": "#0f1117",
+  "theme_color": "#e8343a",
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["utilities", "automotive"],
+  "description": "Honda ECU K-Line Diagnostic & Remapping Tool via ESP32 WiFi",
+  "shortcuts": [
+    {
+      "name": "Live Data",
+      "url": "/mobile.html#live",
+      "description": "View real-time ECU parameters"
+    },
+    {
+      "name": "Read DTC",
+      "url": "/mobile.html#diagnostic",
+      "description": "Scan for fault codes"
+    }
+  ]
+}

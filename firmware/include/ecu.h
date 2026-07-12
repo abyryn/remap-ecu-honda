@@ -5,6 +5,7 @@
 // ============================================================
 #include <Arduino.h>
 #include <vector>
+#include <functional>
 #include <ArduinoJson.h>
 
 // --- ECU Connection State ---
@@ -33,6 +34,7 @@ struct ECUInfo {
     uint32_t eepromSize;
     uint32_t flashSize;
     String vin;
+    String calibrationId;
     uint8_t checksum;
 };
 
@@ -71,6 +73,9 @@ enum HondaModel {
     HONDA_CRF150L,
     HONDA_STYLO,
     HONDA_EM1,
+    HONDA_MEGAPRO,
+    HONDA_CBR250RR,
+    HONDA_REVO,
     HONDA_UNKNOWN
 };
 

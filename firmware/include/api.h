@@ -20,6 +20,8 @@ private:
     void handleLog(AsyncWebServerRequest* req);
     void handleFiles(AsyncWebServerRequest* req);
     void handleSettings(AsyncWebServerRequest* req);
+    void handleMapsList(AsyncWebServerRequest* req);
+    void handleMapGet(AsyncWebServerRequest* req);
 
     // --- POST handlers ---
     void handleConnect(AsyncWebServerRequest* req);
@@ -42,6 +44,19 @@ private:
                         uint8_t* data, size_t len, size_t index, size_t total);
     void handleDeleteBackup(AsyncWebServerRequest* req);
     void handleExportLog(AsyncWebServerRequest* req);
+    void handleMapUpdate(AsyncWebServerRequest* req,
+                         uint8_t* data, size_t len, size_t index, size_t total);
+
+    // Flash operations
+    void handleEcuRead(AsyncWebServerRequest* req,
+                       uint8_t* data, size_t len, size_t index, size_t total);
+    void handleEcuWrite(AsyncWebServerRequest* req,
+                        uint8_t* data, size_t len, size_t index, size_t total);
+    void handleEcuErase(AsyncWebServerRequest* req);
+    void handleEcuVerify(AsyncWebServerRequest* req,
+                         uint8_t* data, size_t len, size_t index, size_t total);
+    void handleEcuReset(AsyncWebServerRequest* req);
+    void handleRecovery(AsyncWebServerRequest* req);
 
     // OTA upload
     void handleOTAUpload(AsyncWebServerRequest* req,

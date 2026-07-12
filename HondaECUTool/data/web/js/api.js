@@ -141,6 +141,8 @@ const API = (() => {
     connect, disconnect, readId, readDTC, clearDTC,
     startLog, stopLog, backup, restore, reboot,
     saveSettings, setModel, klineSend,
+    // Generic Request
+    request: _req,
     // DELETE
     deleteBackup,
     // File

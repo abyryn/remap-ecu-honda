@@ -1,0 +1,170 @@
+{
+  "api": {
+    "name": "NetworkPlugin",
+    "slug": "networkplugin",
+    "docs": "",
+    "tags": [],
+    "methods": [
+      {
+        "name": "getStatus",
+        "signature": "() => Promise<ConnectionStatus>",
+        "parameters": [],
+        "returns": "Promise<ConnectionStatus>",
+        "tags": [
+          {
+            "name": "since",
+            "text": "1.0.0"
+          }
+        ],
+        "docs": "Query the current status of the network connection.",
+        "complexTypes": [
+          "ConnectionStatus"
+        ],
+        "slug": "getstatus"
+      },
+      {
+        "name": "addListener",
+        "signature": "(eventName: 'networkStatusChange', listenerFunc: ConnectionStatusChangeListener) => Promise<PluginListenerHandle>",
+        "parameters": [
+          {
+            "name": "eventName",
+            "docs": "",
+            "type": "'networkStatusChange'"
+          },
+          {
+            "name": "listenerFunc",
+            "docs": "",
+            "type": "ConnectionStatusChangeListener"
+          }
+        ],
+        "returns": "Promise<PluginListenerHandle>",
+        "tags": [
+          {
+            "name": "since",
+            "text": "1.0.0"
+          }
+        ],
+        "docs": "Listen for changes in the network connection.",
+        "complexTypes": [
+          "PluginListenerHandle",
+          "ConnectionStatusChangeListener"
+        ],
+        "slug": "addlistenernetworkstatuschange-"
+      },
+      {
+        "name": "removeAllListeners",
+        "signature": "() => Promise<void>",
+        "parameters": [],
+        "returns": "Promise<void>",
+        "tags": [
+          {
+            "name": "since",
+            "text": "1.0.0"
+          }
+        ],
+        "docs": "Remove all listeners (including the network status changes) for this plugin.",
+        "complexTypes": [],
+        "slug": "removealllisteners"
+      }
+    ],
+    "properties": []
+  },
+  "interfaces": [
+    {
+      "name": "ConnectionStatus",
+      "slug": "connectionstatus",
+      "docs": "Represents the state and type of the network connection.",
+      "tags": [
+        {
+          "text": "1.0.0",
+          "name": "since"
+        }
+      ],
+      "methods": [],
+      "properties": [
+        {
+          "name": "connected",
+          "tags": [
+            {
+              "text": "1.0.0",
+              "name": "since"
+            }
+          ],
+          "docs": "Whether there is an active connection or not.",
+          "complexTypes": [],
+          "type": "boolean"
+        },
+        {
+          "name": "connectionType",
+          "tags": [
+            {
+              "text": "1.0.0",
+              "name": "since"
+            }
+          ],
+          "docs": "The type of network connection currently in use.\n\nIf there is no active network connection, `connectionType` will be `'none'`.",
+          "complexTypes": [
+            "ConnectionType"
+          ],
+          "type": "ConnectionType"
+        }
+      ]
+    },
+    {
+      "name": "PluginListenerHandle",
+      "slug": "pluginlistenerhandle",
+      "docs": "",
+      "tags": [],
+      "methods": [],
+      "properties": [
+        {
+          "name": "remove",
+          "tags": [],
+          "docs": "",
+          "complexTypes": [],
+          "type": "() => Promise<void>"
+        }
+      ]
+    }
+  ],
+  "enums": [],
+  "typeAliases": [
+    {
+      "name": "ConnectionType",
+      "slug": "connectiontype",
+      "docs": "The type of network connection that a device might have.",
+      "types": [
+        {
+          "text": "'wifi'",
+          "complexTypes": []
+        },
+        {
+          "text": "'cellular'",
+          "complexTypes": []
+        },
+        {
+          "text": "'none'",
+          "complexTypes": []
+        },
+        {
+          "text": "'unknown'",
+          "complexTypes": []
+        }
+      ]
+    },
+    {
+      "name": "ConnectionStatusChangeListener",
+      "slug": "connectionstatuschangelistener",
+      "docs": "Callback to receive the status change notifications.",
+      "types": [
+        {
+          "text": "(status: ConnectionStatus): void",
+          "complexTypes": [
+            "ConnectionStatus"
+          ]
+        }
+      ]
+    }
+  ],
+  "pluginConfigs": []
+}

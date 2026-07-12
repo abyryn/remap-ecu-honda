@@ -3,7 +3,6 @@
 // Protocol: Honda Proprietary over K-Line (KWP2000-like)
 // ============================================================
 #include "include/ecu.h"
-#include "include/config.h"
 #include "include/kline.h"
 #include "include/logger.h"
 #include <ArduinoJson.h>
@@ -324,6 +323,7 @@ String ECUManager::ecuInfoToJson() {
     doc["eepromSize"]    = _info.eepromSize;
     doc["flashSize"]     = _info.flashSize;
     doc["vin"]           = _info.vin;
+    doc["calibrationId"] = _info.calibrationId;
     doc["checksum"]      = _info.checksum;
     doc["model"]         = modelName(_model);
     String out;
@@ -373,6 +373,9 @@ String ECUManager::modelName(HondaModel model) {
         case HONDA_CRF150L: return "Honda CRF150L";
         case HONDA_STYLO:   return "Honda Stylo";
         case HONDA_EM1:     return "Honda EM1";
+        case HONDA_MEGAPRO: return "Honda MegaPro FI";
+        case HONDA_CBR250RR:return "Honda CBR250RR";
+        case HONDA_REVO:    return "Honda Revo";
         default:            return "Unknown";
     }
 }

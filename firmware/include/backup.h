@@ -17,9 +17,11 @@ struct BackupMeta {
     String   filename;
     String   timestamp;
     size_t   size;
-    uint8_t  checksum;
+    uint32_t checksum;
     String   model;
     String   partNumber;
+    String   calibrationId;
+    String   vin;
 };
 
 class BackupManager {
@@ -33,6 +35,12 @@ public:
      */
     bool backupEEPROM(const String& filename,
                       std::function<void(int, const String&)> onProgress = nullptr);
+
+    /**
+     * @brief Start Full Flash backup
+     */
+    bool backupFullFlash(const String& filename,
+                         std::function<void(int, const String&)> onProgress = nullptr);
 
     /**
      * @brief Verify a saved BIN file checksum
@@ -69,7 +77,7 @@ private:
     BackupState _state;
     int         _progress;
 
-    uint8_t _calcFileCRC(const String& path);
+    uint32_t _calcFileCRC(const String& path);
 };
 
 extern BackupManager Backup;

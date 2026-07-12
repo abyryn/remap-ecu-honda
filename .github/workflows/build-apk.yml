@@ -1,0 +1,141 @@
+name: Build Honda ECU Tool APK
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      # ---- Checkout ----
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ---- Setup Java ----
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # ---- Setup Node.js ----
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: honda-ecu-apk/package.json
+
+      # ---- Install Capacitor ----
+      - name: Install npm dependencies
+        working-directory: honda-ecu-apk
+        run: npm ci
+
+      # ---- Sync Capacitor ----
+      - name: Capacitor sync (copy web assets to Android)
+        working-directory: honda-ecu-apk
+        run: npx cap sync android
+
+      # ---- Setup Android SDK (pre-installed on ubuntu-latest) ----
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ---- Cache Gradle ----
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # ---- Grant Gradle execute permission ----
+      - name: Grant execute permission for gradlew
+        working-directory: honda-ecu-apk/android
+        run: chmod +x gradlew
+
+      # ---- Build Debug APK ----
+      - name: Build Debug APK
+        if: github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == ''
+        working-directory: honda-ecu-apk/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      # ---- Build Release APK ----
+      - name: Build Release APK (unsigned)
+        if: github.event.inputs.build_type == 'release'
+        working-directory: honda-ecu-apk/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      # ---- Upload Debug APK ----
+      - name: Upload Debug APK
+        if: github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: HondaECUTool-debug-apk
+          path: honda-ecu-apk/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      # ---- Upload Release APK ----
+      - name: Upload Release APK
+        if: github.event.inputs.build_type == 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: HondaECUTool-release-apk
+          path: honda-ecu-apk/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 30
+
+      # ---- Create GitHub Release (on tag push) ----
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            honda-ecu-apk/android/app/build/outputs/apk/debug/app-debug.apk
+          name: Honda ECU Tool ${{ github.ref_name }}
+          body: |
+            ## Honda ECU Tool ${{ github.ref_name }}
+            
+            ### Cara Install
+            1. Download file APK di bawah
+            2. Transfer ke HP Android
+            3. Buka file → Install (aktifkan Unknown Sources jika perlu)
+            4. Buka app → konek ke WiFi "Honda ECU Tool"
+            5. Masukkan IP ESP32: **192.168.4.1**
+            
+            ### Requirement
+            - Android 6.0+ (API 23+)
+            - WiFi (untuk konek ke ESP32)
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---- Summary ----
+      - name: Build Summary
+        run: |
+          echo "## ✅ APK Build Selesai!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Info | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| App | Honda ECU Tool |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | 1.0.0 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target | Android 6.0+ (API 23+) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Type | ${{ github.event.inputs.build_type || 'debug' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 Download APK dari tab **Artifacts** di atas" >> $GITHUB_STEP_SUMMARY

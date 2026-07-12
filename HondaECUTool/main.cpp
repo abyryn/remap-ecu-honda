@@ -51,13 +51,7 @@ void setup() {
     digitalWrite(LED_PIN, HIGH);
 
     // --- Watchdog ---
-    // ESP32 Arduino Core 3.x uses esp_task_wdt_config_t struct
-    const esp_task_wdt_config_t wdtCfg = {
-        .timeout_ms     = WDT_TIMEOUT_SEC * 1000,
-        .idle_core_mask = 0,
-        .trigger_panic  = true
-    };
-    esp_task_wdt_init(&wdtCfg);
+    esp_task_wdt_init(WDT_TIMEOUT_SEC, true);
     esp_task_wdt_add(nullptr);
 
     // --- Logger ---

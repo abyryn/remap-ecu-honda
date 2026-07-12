@@ -1,0 +1,2204 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Honda ECU">
+  <meta name="theme-color" content="#0f1117">
+  <meta name="description" content="Honda ECU K-Line Diagnostic & Remapping Tool — Mobile">
+  <title>Honda ECU Tool</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       MOBILE CSS — Honda ECU Tool
+       ============================================================ */
+    :root {
+      --bg-primary:    #0f1117;
+      --bg-secondary:  #1a1d27;
+      --bg-card:       #1e2235;
+      --bg-glass:      rgba(20, 23, 35, 0.92);
+      --border-color:  rgba(255,255,255,0.07);
+      --accent:        #e8343a;
+      --accent-dark:   #b32028;
+      --accent-glow:   rgba(232, 52, 58, 0.25);
+      --accent-soft:   rgba(232, 52, 58, 0.12);
+      --text-primary:  #f0f2f8;
+      --text-secondary:#8a91a8;
+      --text-muted:    #555c73;
+      --success:       #22c55e;
+      --success-bg:    rgba(34,197,94,0.12);
+      --warning:       #f59e0b;
+      --warning-bg:    rgba(245,158,11,0.12);
+      --danger:        #ef4444;
+      --danger-bg:     rgba(239,68,68,0.12);
+      --info:          #3b82f6;
+      --info-bg:       rgba(59,130,246,0.12);
+      --nav-h:         68px;
+      --safe-bottom:   env(safe-area-inset-bottom, 0px);
+      --topbar-h:      56px;
+      --radius:        16px;
+      --radius-sm:     10px;
+      --radius-xs:     7px;
+      --shadow:        0 4px 24px rgba(0,0,0,0.5);
+      --shadow-sm:     0 2px 12px rgba(0,0,0,0.3);
+      --transition:    0.2s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================================
+       TOP BAR
+       ============================================================ */
+    .topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--topbar-h);
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      z-index: 100;
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+
+    .topbar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .logo-icon-m {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 12px var(--accent-glow);
+      flex-shrink: 0;
+    }
+
+    .logo-text-m {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .logo-sub {
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--text-muted);
+      display: block;
+      margin-top: -2px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 36px; height: 36px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xs);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 15px;
+      transition: all var(--transition);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .icon-btn:active { transform: scale(0.93); }
+    .icon-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ECU connect status pill */
+    .ecu-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 99px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .ecu-status-pill:active { transform: scale(0.95); }
+    .ecu-status-pill.connected { border-color: var(--success); color: var(--success); }
+    .ecu-status-pill.disconnected { color: var(--text-muted); }
+
+    .ecu-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: background var(--transition);
+    }
+    .ecu-dot.green { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .ecu-dot.red   { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+
+    /* ============================================================
+       MAIN SCROLL AREA
+       ============================================================ */
+    .app-body {
+      position: fixed;
+      top: var(--topbar-h);
+      left: 0; right: 0;
+      bottom: calc(var(--nav-h) + var(--safe-bottom));
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+    }
+
+    .page-section {
+      display: none;
+      padding: 16px;
+      padding-bottom: 8px;
+      min-height: 100%;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .page-section.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================================
+       BOTTOM NAVIGATION
+       ============================================================ */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: calc(var(--nav-h) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: stretch;
+      z-index: 100;
+    }
+
+    .nav-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: color var(--transition);
+      position: relative;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .nav-tab:active { opacity: 0.7; }
+
+    .nav-tab.active { color: var(--accent); }
+
+    .nav-tab-icon {
+      font-size: 20px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-tab.active .nav-tab-icon::before {
+      content: '';
+      position: absolute;
+      width: 44px; height: 30px;
+      background: var(--accent-soft);
+      border-radius: 99px;
+      z-index: -1;
+    }
+
+    .nav-tab-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+
+    .nav-badge {
+      position: absolute;
+      top: -4px; right: -8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      min-width: 16px; height: 16px;
+      border-radius: 99px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 3px;
+    }
+
+    /* ============================================================
+       CARDS
+       ============================================================ */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card + .card { margin-top: 12px; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-action {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ============================================================
+       STAT CHIPS  (dashboard metrics)
+       ============================================================ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .stat-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 14px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-chip::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--chip-color, var(--accent));
+    }
+
+    .stat-icon {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: var(--chip-bg, var(--accent-soft));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      color: var(--chip-color, var(--accent));
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.5px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* ============================================================
+       ECU STATUS HERO
+       ============================================================ */
+    .ecu-hero {
+      background: linear-gradient(135deg, #1a1530 0%, var(--bg-card) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ecu-hero::before {
+      content: '🏍';
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 60px;
+      opacity: 0.1;
+    }
+
+    .ecu-hero-state {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .ecu-hero-state.connected { color: var(--success); }
+    .ecu-hero-state.disconnected { color: var(--text-secondary); }
+
+    .ecu-hero-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .hero-connect-btn {
+      margin-top: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all var(--transition);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .hero-connect-btn:active { transform: scale(0.96); opacity: 0.9; }
+    .hero-connect-btn.secondary {
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+      margin-left: 8px;
+    }
+
+    /* ============================================================
+       STORAGE BAR
+       ============================================================ */
+    .storage-bar-wrap {
+      background: var(--bg-secondary);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+
+    .storage-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #ff6b35);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    /* ============================================================
+       LIVE DATA CARDS
+       ============================================================ */
+    .live-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .live-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+    }
+
+    .live-card-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .live-card-value {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.5px;
+    }
+
+    .live-card-unit {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Live chart wrapper */
+    .chart-wrap {
+      height: 180px;
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    /* ============================================================
+       DIAGNOSTIC / DTC
+       ============================================================ */
+    .dtc-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .dtc-item:last-child { border-bottom: none; }
+
+    .dtc-code {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-radius: var(--radius-xs);
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      font-family: 'Courier New', monospace;
+    }
+
+    .dtc-desc { flex: 1; }
+
+    .dtc-desc-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .dtc-desc-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .mil-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+    }
+
+    .mil-on  { background: var(--danger-bg); color: var(--danger); }
+    .mil-off { background: var(--success-bg); color: var(--success); }
+
+    /* ============================================================
+       BUTTONS
+       ============================================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 11px 18px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      transition: all var(--transition);
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+    }
+
+    .btn:active { transform: scale(0.96); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-primary   { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); }
+    .btn-success   { background: var(--success); color: #fff; }
+    .btn-danger    { background: var(--danger); color: #fff; }
+    .btn-warning   { background: var(--warning); color: #000; }
+    .btn-sm        { padding: 7px 12px; font-size: 12px; }
+    .btn-full      { width: 100%; }
+    .btn-icon-only { padding: 10px; }
+
+    /* ============================================================
+       FORM CONTROLS
+       ============================================================ */
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color var(--transition);
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .form-control:focus { border-color: var(--accent); }
+    select.form-control { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='%238a91a8'%3E%3Cpath d='M0 0l6 8 6-8z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+    /* ============================================================
+       PROGRESS BAR
+       ============================================================ */
+    .progress-wrap {
+      background: var(--bg-secondary);
+      border-radius: 99px;
+      height: 8px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #ff6b35);
+      border-radius: 99px;
+      transition: width 0.3s ease;
+    }
+
+    /* ============================================================
+       TERMINAL
+       ============================================================ */
+    .terminal-output {
+      background: #050709;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      height: 260px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 10px;
+    }
+
+    .terminal-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .terminal-input {
+      flex: 1;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 11px 14px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+      outline: none;
+    }
+
+    .terminal-input:focus { border-color: var(--accent); }
+
+    .quick-cmds {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 8px 0;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .quick-cmds::-webkit-scrollbar { display: none; }
+
+    .qcmd-btn {
+      flex-shrink: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 99px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .qcmd-btn:active { opacity: 0.7; }
+
+    /* ============================================================
+       FILE LIST
+       ============================================================ */
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .file-item:last-child { border-bottom: none; }
+
+    .file-icon {
+      width: 38px; height: 38px;
+      background: var(--info-bg);
+      border-radius: var(--radius-xs);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .file-info { flex: 1; min-width: 0; }
+
+    .file-name {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* ============================================================
+       TOAST NOTIFICATIONS
+       ============================================================ */
+    #toast-container {
+      position: fixed;
+      top: calc(var(--topbar-h) + 8px);
+      left: 12px; right: 12px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      animation: toastIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      pointer-events: all;
+    }
+
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.error   { border-left: 3px solid var(--danger); }
+    .toast.warning { border-left: 3px solid var(--warning); }
+    .toast.info    { border-left: 3px solid var(--info); }
+
+    @keyframes toastIn {
+      from { transform: translateY(-20px) scale(0.9); opacity: 0; }
+      to   { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .toast-icon { font-size: 18px; }
+    .toast-msg  { flex: 1; }
+    .toast-title { font-size: 13px; font-weight: 700; margin-bottom: 1px; }
+    .toast-body  { font-size: 12px; color: var(--text-secondary); }
+
+    /* ============================================================
+       MODAL / SHEET
+       ============================================================ */
+    .sheet-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 500;
+      display: none;
+      align-items: flex-end;
+    }
+
+    .sheet-overlay.show { display: flex; }
+
+    .sheet {
+      background: var(--bg-secondary);
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      padding: 16px;
+      padding-bottom: calc(16px + var(--safe-bottom));
+      max-height: 85vh;
+      overflow-y: auto;
+      animation: sheetUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes sheetUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+
+    .sheet-handle {
+      width: 40px; height: 4px;
+      background: var(--border-color);
+      border-radius: 99px;
+      margin: 0 auto 16px;
+    }
+
+    .sheet-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    /* ============================================================
+       MAP EDITOR (mobile simplified)
+       ============================================================ */
+    .map-toolbar-m {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+
+    .map-table-wrapper {
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      max-height: calc(100vh - 280px);
+    }
+
+    /* ============================================================
+       FLASH PROGRESS
+       ============================================================ */
+    .flash-progress-card {
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    .flash-status-text {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .flash-details-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+
+    /* ============================================================
+       SECTION HEADER
+       ============================================================ */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+    }
+
+    .section-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ============================================================
+       TABLE
+       ============================================================ */
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      font-weight: 700;
+      background: var(--bg-secondary);
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    /* ============================================================
+       SCROLLBAR
+       ============================================================ */
+    ::-webkit-scrollbar { width: 3px; height: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 99px; }
+
+    /* ============================================================
+       SUB-PAGE DRAWER (for more items - slide panel)
+       ============================================================ */
+    .more-drawer {
+      position: fixed;
+      top: 0; right: -100%; bottom: 0;
+      width: 280px;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
+      z-index: 300;
+      transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+      overflow-y: auto;
+    }
+
+    .more-drawer.open { right: 0; }
+
+    .drawer-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .drawer-title { font-size: 15px; font-weight: 700; }
+
+    .drawer-close {
+      width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 18px;
+    }
+
+    .drawer-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      border-bottom: 1px solid var(--border-color);
+      transition: all var(--transition);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .drawer-nav-item:active { background: var(--bg-card); }
+    .drawer-nav-item.active { color: var(--accent); }
+    .drawer-nav-item i { width: 20px; text-align: center; font-size: 16px; }
+
+    .drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 299;
+      display: none;
+    }
+
+    .drawer-overlay.show { display: block; }
+
+    /* ============================================================
+       ABOUT PAGE
+       ============================================================ */
+    .about-hero {
+      background: linear-gradient(135deg, #1a1530, #1e2235);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .about-logo {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      margin: 0 auto 12px;
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+
+    .about-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .about-version {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ============================================================
+       INFO ROWS
+       ============================================================ */
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+      gap: 12px;
+    }
+
+    .info-row:last-child { border-bottom: none; }
+    .info-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+    .info-value { font-size: 13px; font-weight: 600; text-align: right; flex: 1; }
+
+    /* ============================================================
+       TOGGLE SWITCH
+       ============================================================ */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-label { font-size: 14px; font-weight: 500; }
+    .toggle-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .toggle-switch {
+      position: relative;
+      width: 44px; height: 26px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input { display: none; }
+
+    .toggle-switch .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-secondary);
+      border-radius: 99px;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+
+    .toggle-switch .toggle-thumb {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 18px; height: 18px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: all var(--transition);
+      pointer-events: none;
+    }
+
+    .toggle-switch input:checked ~ .toggle-track { background: var(--accent); border-color: var(--accent); }
+    .toggle-switch input:checked ~ .toggle-thumb { left: 21px; background: #fff; }
+
+    /* ============================================================
+       LOADER
+       ============================================================ */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border-color);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============================================================
+       VEHICLE PAGE
+       ============================================================ */
+    .ecu-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 13px;
+    }
+
+    .ecu-info-row:last-child { border-bottom: none; }
+    .ecu-info-label { color: var(--text-muted); }
+    .ecu-info-value { font-weight: 600; text-align: right; }
+
+    /* Pulse animation for live recording */
+    .pulse {
+      animation: pulseAnim 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- ===== TOAST ===== -->
+<div id="toast-container"></div>
+
+<!-- ===== DRAWER OVERLAY ===== -->
+<div class="drawer-overlay" id="drawer-overlay"></div>
+
+<!-- ===== MORE DRAWER ===== -->
+<div class="more-drawer" id="more-drawer">
+  <div class="drawer-header">
+    <div class="drawer-title">🔧 More Tools</div>
+    <div class="drawer-close" id="drawer-close-btn"><i class="fa fa-xmark"></i></div>
+  </div>
+  <div class="drawer-nav-item" data-page="mapeditor"><i class="fa fa-table-cells"></i> Map Editor</div>
+  <div class="drawer-nav-item" data-page="flash"><i class="fa fa-microchip"></i> Flash ECU</div>
+  <div class="drawer-nav-item" data-page="restore"><i class="fa fa-rotate-left"></i> Restore / Compare</div>
+  <div class="drawer-nav-item" data-page="files"><i class="fa fa-folder-open"></i> File Manager</div>
+  <div class="drawer-nav-item" data-page="logger"><i class="fa fa-file-lines"></i> Session Logs</div>
+  <div class="drawer-nav-item" data-page="terminal"><i class="fa fa-terminal"></i> K-Line Terminal</div>
+  <div class="drawer-nav-item" data-page="settings"><i class="fa fa-gear"></i> Settings</div>
+  <div class="drawer-nav-item" data-page="about"><i class="fa fa-circle-info"></i> About</div>
+</div>
+
+<!-- ===== TOP BAR ===== -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-icon-m">🏍</div>
+    <div>
+      <div class="logo-text-m">Honda ECU Tool</div>
+      <span class="logo-sub">ESP32 K-Line v1.0</span>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <div class="ecu-status-pill disconnected" id="ecu-pill" onclick="handlePillConnect()">
+      <div class="ecu-dot" id="ecu-pill-dot"></div>
+      <span id="ecu-pill-txt">Offline</span>
+    </div>
+    <div class="icon-btn" id="btn-theme-m" title="Toggle theme">
+      <i class="fa fa-moon"></i>
+    </div>
+  </div>
+</header>
+
+<!-- ===== MAIN BODY ===== -->
+<main class="app-body" id="app-body">
+
+  <!-- ========== PAGE: DASHBOARD ========== -->
+  <div class="page-section active" id="page-dashboard">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Dashboard</div>
+        <div class="section-sub" id="dash-uptime-sub">System uptime: —</div>
+      </div>
+      <button class="btn btn-sm btn-secondary" id="dash-refresh-btn" onclick="App.refreshStatus()">
+        <i class="fa fa-rotate"></i>
+      </button>
+    </div>
+
+    <!-- ECU Hero -->
+    <div class="ecu-hero">
+      <div class="ecu-hero-state disconnected" id="dash-ecu-state">Disconnected</div>
+      <div class="ecu-hero-sub">Firmware: <span id="dash-version">—</span> &nbsp;|&nbsp; WS: <span id="dash-ws-status">Offline</span></div>
+      <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap">
+        <button class="hero-connect-btn" id="btn-connect">
+          <i class="fa fa-plug"></i> Connect ECU
+        </button>
+        <button class="hero-connect-btn secondary" id="btn-disconnect">
+          <i class="fa fa-power-off"></i> Disconnect
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-chip" style="--chip-color: var(--info); --chip-bg: var(--info-bg)">
+        <div class="stat-icon"><i class="fa fa-memory"></i></div>
+        <div class="stat-value"><span id="dash-heap">—</span></div>
+        <div class="stat-label">Free Heap</div>
+      </div>
+      <div class="stat-chip" style="--chip-color: var(--warning); --chip-bg: var(--warning-bg)">
+        <div class="stat-icon"><i class="fa fa-bolt"></i></div>
+        <div class="stat-value"><span id="dash-vbat">—</span><span style="font-size:14px"> V</span></div>
+        <div class="stat-label">Battery</div>
+      </div>
+      <div class="stat-chip" style="--chip-color: var(--success); --chip-bg: var(--success-bg)">
+        <div class="stat-icon"><i class="fa fa-temperature-half"></i></div>
+        <div class="stat-value"><span id="dash-cpu">—</span><span style="font-size:14px">°C</span></div>
+        <div class="stat-label">CPU Temp</div>
+      </div>
+      <div class="stat-chip" style="--chip-color: var(--accent); --chip-bg: var(--accent-soft)">
+        <div class="stat-icon"><i class="fa fa-hard-drive"></i></div>
+        <div class="stat-value" id="dash-fs-pct-m">—%</div>
+        <div class="stat-label">Storage Used</div>
+      </div>
+    </div>
+
+    <!-- Storage bar -->
+    <div class="card" style="margin-top:0">
+      <div class="card-title"><i class="fa fa-hard-drive"></i> Storage</div>
+      <div class="storage-bar-wrap">
+        <div class="storage-bar-fill" id="dash-fs-bar" style="width:0%"></div>
+      </div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:6px" id="dash-fs-detail">—</div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="card">
+      <div class="card-title"><i class="fa fa-bolt"></i> Quick Actions</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px">
+        <button class="btn btn-secondary btn-sm" onclick="App.navigate('live')"><i class="fa fa-chart-line"></i> Live Data</button>
+        <button class="btn btn-secondary btn-sm" onclick="App.navigate('diagnostic')"><i class="fa fa-triangle-exclamation"></i> Read DTC</button>
+        <button class="btn btn-secondary btn-sm" onclick="App.navigate('backup')"><i class="fa fa-floppy-disk"></i> Backup</button>
+        <button class="btn btn-secondary btn-sm" onclick="App.navigate('vehicle')"><i class="fa fa-motorcycle"></i> Vehicle Info</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: LIVE DATA ========== -->
+  <div class="page-section" id="page-live">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Live Data</div>
+        <div class="section-sub">Real-time ECU parameters</div>
+      </div>
+      <div style="display:flex; gap:6px">
+        <button class="btn btn-sm btn-secondary" id="btn-live-pause">⏸</button>
+        <button class="btn btn-sm btn-secondary" id="btn-live-export">⬇</button>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="card" style="padding:14px">
+      <div class="card-title"><i class="fa fa-chart-area"></i> RPM / TPS Chart</div>
+      <div class="chart-wrap">
+        <canvas id="live-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- PID Grid -->
+    <div class="live-grid" style="margin-top:10px">
+      <div class="live-card">
+        <div class="live-card-label">RPM</div>
+        <div class="live-card-value" id="live-rpm">0</div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">TPS</div>
+        <div class="live-card-value" id="live-tps">0<span class="live-card-unit">%</span></div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">MAP</div>
+        <div class="live-card-value" id="live-map">0<span class="live-card-unit">kPa</span></div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">IAT</div>
+        <div class="live-card-value" id="live-iat">0<span class="live-card-unit">°C</span></div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">ECT</div>
+        <div class="live-card-value" id="live-ect">0<span class="live-card-unit">°C</span></div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">Battery</div>
+        <div class="live-card-value" id="live-vbat">0<span class="live-card-unit">V</span></div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">Inj PW</div>
+        <div class="live-card-value" id="live-inj">0<span class="live-card-unit">ms</span></div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">Ign Timing</div>
+        <div class="live-card-value" id="live-ign">0<span class="live-card-unit">°</span></div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">Speed</div>
+        <div class="live-card-value" id="live-speed">0<span class="live-card-unit">km/h</span></div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">Engine Load</div>
+        <div class="live-card-value" id="live-load">0<span class="live-card-unit">%</span></div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">O2 Sensor</div>
+        <div class="live-card-value" id="live-o2">0<span class="live-card-unit">mV</span></div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">Fuel Trim</div>
+        <div class="live-card-value" id="live-ftrim">0<span class="live-card-unit">%</span></div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">Loop Mode</div>
+        <div class="live-card-value" style="font-size:16px" id="live-loop">—</div>
+      </div>
+      <div class="live-card">
+        <div class="live-card-label">Idle SW</div>
+        <div class="live-card-value" style="font-size:16px" id="live-idle">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: DIAGNOSTIC ========== -->
+  <div class="page-section" id="page-diagnostic">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Diagnostic</div>
+        <div class="section-sub">Fault Code Scanner</div>
+      </div>
+      <span class="nav-badge" id="dtc-count-badge" style="position:static; font-size:11px; padding:3px 8px; border-radius:99px; background:var(--accent); color:#fff">0</span>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-bottom:12px">
+      <button class="btn btn-primary btn-sm" style="flex:1" id="btn-read-dtc"><i class="fa fa-magnifying-glass"></i> Read DTC</button>
+      <button class="btn btn-danger btn-sm" style="flex:1" id="btn-clear-dtc"><i class="fa fa-trash"></i> Clear DTC</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fa fa-triangle-exclamation"></i> Fault Codes</div>
+      <div id="dtc-list">
+        <div style="text-align:center; padding:32px; color:var(--text-muted)">
+          <i class="fa fa-magnifying-glass" style="font-size:32px; margin-bottom:12px; display:block; opacity:0.4"></i>
+          Press "Read DTC" to scan for fault codes
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: VEHICLE ========== -->
+  <div class="page-section" id="page-vehicle">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Vehicle</div>
+        <div class="section-sub">Model &amp; ECU Information</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fa fa-motorcycle"></i> Select Model</div>
+      <div class="form-group" style="margin-bottom:0">
+        <select class="form-control" id="set-model"></select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa fa-microchip"></i> ECU Information</div>
+        <button class="btn btn-sm btn-primary" id="btn-read-ecu-id"><i class="fa fa-id-card"></i> Read ID</button>
+      </div>
+      <div class="ecu-info-row"><span class="ecu-info-label">Manufacturer</span><span class="ecu-info-value" id="ecu-mfr">—</span></div>
+      <div class="ecu-info-row"><span class="ecu-info-label">Part Number</span><span class="ecu-info-value" id="ecu-part">—</span></div>
+      <div class="ecu-info-row"><span class="ecu-info-label">FW Version</span><span class="ecu-info-value" id="ecu-fw">—</span></div>
+      <div class="ecu-info-row"><span class="ecu-info-label">HW Version</span><span class="ecu-info-value" id="ecu-hw">—</span></div>
+      <div class="ecu-info-row"><span class="ecu-info-label">Protocol</span><span class="ecu-info-value" id="ecu-proto">—</span></div>
+      <div class="ecu-info-row"><span class="ecu-info-label">EEPROM Size</span><span class="ecu-info-value" id="ecu-eeprom">—</span></div>
+      <div class="ecu-info-row"><span class="ecu-info-label">Checksum</span><span class="ecu-info-value" id="ecu-chk">—</span></div>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: BACKUP ========== -->
+  <div class="page-section" id="page-backup">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Backup</div>
+        <div class="section-sub">ECU EEPROM management</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fa fa-floppy-disk"></i> Create Backup</div>
+      <div style="font-size:12px; color:var(--text-secondary); margin-bottom:14px">
+        Read EEPROM from connected ECU and save as .bin file.
+      </div>
+      <div id="backup-progress-wrap" style="display:none; margin-bottom:12px">
+        <div class="progress-wrap">
+          <div class="progress-fill" id="backup-progress-bar" style="width:0%"></div>
+        </div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:4px" id="backup-progress-label">0%</div>
+      </div>
+      <button class="btn btn-primary btn-full" id="btn-start-backup">
+        <i class="fa fa-floppy-disk"></i> Start Backup
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa fa-list"></i> Backup Files</div>
+        <button class="btn btn-secondary btn-sm" id="btn-refresh-backups"><i class="fa fa-rotate"></i></button>
+      </div>
+      <div id="backup-file-list">
+        <div style="text-align:center; padding:24px; color:var(--text-muted); font-size:12px">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: MAP EDITOR ========== -->
+  <div class="page-section" id="page-mapeditor">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Map Editor</div>
+        <div class="section-sub">ECU calibration maps</div>
+      </div>
+    </div>
+    <div class="map-toolbar-m">
+      <select class="form-control" id="map-select" style="flex:1; min-width:0">
+        <option value="">-- Select Map --</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" id="btn-map-load" disabled><i class="fa fa-download"></i> Load</button>
+    </div>
+    <div style="display:flex; gap:6px; margin-bottom:10px">
+      <button class="btn btn-secondary btn-sm" id="btn-map-undo" disabled><i class="fa fa-rotate-left"></i> Undo</button>
+      <button class="btn btn-secondary btn-sm" id="btn-map-redo" disabled><i class="fa fa-rotate-right"></i> Redo</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-primary btn-sm" id="btn-map-save" disabled><i class="fa fa-floppy-disk"></i> Apply</button>
+    </div>
+    <div class="map-table-wrapper" id="map-table-container">
+      <div style="text-align:center; padding:60px 20px; color:var(--text-muted)">
+        <i class="fa fa-table fa-2x" style="margin-bottom:12px; display:block; opacity:0.4"></i>
+        No map loaded. Select a map and click 'Load'.
+      </div>
+    </div>
+    <div style="font-size:11px; color:var(--text-muted); margin-top:6px; text-align:center">
+      <span id="map-info-label">Map Size: --</span>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: FLASH ECU ========== -->
+  <div class="page-section" id="page-flash">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Flash ECU</div>
+        <div class="section-sub">Read &amp; write ECU firmware</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fa fa-download"></i> Read ECU Flash</div>
+      <div style="font-size:12px; color:var(--text-secondary); margin-bottom:14px">Read calibration or full flash image into device memory buffer.</div>
+      <div style="display:flex; gap:8px">
+        <button class="btn btn-secondary btn-sm" style="flex:1" id="btn-flash-read-cal">Read Cal</button>
+        <button class="btn btn-secondary btn-sm" style="flex:1" id="btn-flash-read-full">Read Full</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--danger)"><i class="fa fa-upload"></i> Write ECU Flash</div>
+      <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px">
+        Write modified data back to ECU. <strong>⚠ Ensure stable power!</strong>
+      </div>
+      <label style="display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:14px; color:var(--warning)">
+        <input type="checkbox" id="chk-auto-backup" checked> Auto-backup before write (Recommended)
+      </label>
+      <div style="display:flex; gap:8px">
+        <button class="btn btn-danger btn-sm" style="flex:1" id="btn-flash-write-cal" disabled>Write Cal</button>
+        <button class="btn btn-danger btn-sm" style="flex:1" id="btn-flash-write-full" disabled>Write Full</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fa fa-life-ring"></i> Recovery Mode</div>
+      <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px">Use if ECU write fails and ECU becomes unresponsive.</div>
+      <button class="btn btn-warning btn-full" id="btn-flash-recover">Start Recovery Mode</button>
+    </div>
+
+    <!-- Flash progress -->
+    <div class="flash-progress-card" id="flash-progress-box" style="display:none">
+      <div class="flash-status-text" id="flash-status-text">Operation in progress...</div>
+      <div class="progress-wrap" style="height:10px">
+        <div class="progress-fill" id="flash-progress-bar" style="width:0%"></div>
+      </div>
+      <div class="flash-details-row">
+        <span id="flash-speed">0 KB/s</span>
+        <span id="flash-eta">ETA: --:--</span>
+      </div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:8px" id="flash-msg">Initializing...</div>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: FILE MANAGER ========== -->
+  <div class="page-section" id="page-files">
+    <div class="section-header">
+      <div>
+        <div class="section-title">File Manager</div>
+        <div class="section-sub">Storage — LittleFS</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btn-fm-refresh"><i class="fa fa-rotate"></i></button>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden">
+      <ul class="file-list" id="fm-file-list" style="list-style:none; margin:0; padding:0">
+        <li style="padding:32px; text-align:center; color:var(--text-muted)">Loading files...</li>
+      </ul>
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-secondary btn-full" id="btn-fm-load-buffer"><i class="fa fa-upload"></i> Load Selected into Flash Buffer</button>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: RESTORE ========== -->
+  <div class="page-section" id="page-restore">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Restore</div>
+        <div class="section-sub">Compare .bin vs live ECU</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="fa fa-rotate-left"></i> Simulate Restore</div>
+      <div style="font-size:12px; color:var(--text-secondary); margin-bottom:16px">Compare a saved .bin against the live ECU EEPROM. No data is written.</div>
+      <div class="form-group">
+        <label class="form-label">Select BIN File</label>
+        <select class="form-control" id="restore-file-select">
+          <option value="">-- Select --</option>
+        </select>
+      </div>
+      <div id="restore-progress-wrap" style="margin-bottom:12px">
+        <div class="progress-wrap">
+          <div class="progress-fill" id="restore-progress-bar" style="width:0%"></div>
+        </div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:4px" id="restore-progress-label"></div>
+      </div>
+      <button class="btn btn-warning btn-full" id="btn-start-restore">
+        <i class="fa fa-code-compare"></i> Simulate Restore
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: TERMINAL ========== -->
+  <div class="page-section" id="page-terminal">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Terminal</div>
+        <div class="section-sub">K-Line raw communication</div>
+      </div>
+      <div style="display:flex; gap:6px">
+        <button class="btn btn-secondary btn-sm" id="btn-terminal-clear">🗑</button>
+        <button class="btn btn-secondary btn-sm" id="btn-load-log">📋</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden">
+      <div style="padding:10px 12px; border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:8px">
+        <div class="card-title" style="margin-bottom:0"><i class="fa fa-terminal"></i> K-Line Terminal</div>
+        <label style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-muted); margin-left:auto; cursor:pointer">
+          <input type="checkbox" id="terminal-autoscroll" checked> Auto Scroll
+        </label>
+        <button class="btn btn-secondary btn-sm" id="btn-terminal-export">⬇</button>
+      </div>
+      <div id="terminal-output" class="terminal-output" style="border:none; border-radius:0"></div>
+      <div style="padding:10px; border-top:1px solid var(--border-color)">
+        <div class="terminal-input-row">
+          <input type="text" class="terminal-input" id="terminal-input" placeholder="HEX bytes e.g: C1 33 F1 81">
+          <button class="btn btn-primary" id="btn-terminal-send">Send</button>
+        </div>
+        <div class="quick-cmds" style="margin-top:8px">
+          <div class="qcmd-btn" onclick="document.getElementById('terminal-input').value='C1 33 F1 81'">Start Comm</div>
+          <div class="qcmd-btn" onclick="document.getElementById('terminal-input').value='02 10 81 94'">Init Session</div>
+          <div class="qcmd-btn" onclick="document.getElementById('terminal-input').value='02 21 01 24'">Read RPM</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: LOGGER ========== -->
+  <div class="page-section" id="page-logger">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Session Logs</div>
+        <div class="section-sub">ECU data logger</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:12px">
+      <button class="btn btn-success btn-sm" style="flex:1" id="btn-log-start"><i class="fa fa-circle pulse"></i> Start</button>
+      <button class="btn btn-danger btn-sm" style="flex:1" id="btn-log-stop"><i class="fa fa-stop"></i> Stop</button>
+      <a href="/api/log/export" class="btn btn-secondary btn-sm">⬇ CSV</a>
+      <button class="btn btn-secondary btn-sm" id="btn-log-refresh">🔄</button>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden">
+      <div id="log-output" style="
+        background:var(--bg-primary);
+        padding:12px;
+        height:360px;
+        overflow-y:auto;
+        font-family:'Courier New', monospace;
+        font-size:11px;
+        -webkit-overflow-scrolling:touch;
+      "></div>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: SETTINGS ========== -->
+  <div class="page-section" id="page-settings">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Settings</div>
+        <div class="section-sub">Device configuration</div>
+      </div>
+    </div>
+
+    <!-- WiFi -->
+    <div class="card">
+      <div class="card-title"><i class="fa fa-wifi"></i> WiFi Access Point</div>
+      <div class="form-group">
+        <label class="form-label">SSID</label>
+        <input type="text" class="form-control" id="set-ssid" placeholder="Honda ECU Tool">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-control" id="set-password" placeholder="(leave blank to keep)">
+      </div>
+    </div>
+
+    <!-- K-Line -->
+    <div class="card">
+      <div class="card-title"><i class="fa fa-plug-circle-bolt"></i> K-Line / ECU</div>
+      <div class="form-group">
+        <label class="form-label">UART Baudrate</label>
+        <select class="form-control" id="set-baud">
+          <option value="10400">10400 (Honda K-Line)</option>
+          <option value="9600">9600</option>
+          <option value="19200">19200</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Timeout (ms)</label>
+        <input type="number" class="form-control" id="set-timeout" value="1000">
+      </div>
+      <div class="toggle-row" style="padding-top:12px">
+        <div>
+          <div class="toggle-label">Auto Reconnect</div>
+          <div class="toggle-sub">Automatically reconnect on disconnect</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="set-auto-reconnect">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- UI -->
+    <div class="card">
+      <div class="card-title"><i class="fa fa-palette"></i> Interface</div>
+      <div class="form-group">
+        <label class="form-label">Language</label>
+        <select class="form-control" id="set-language">
+          <option value="id">Bahasa Indonesia</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <div class="toggle-row" style="border-bottom:none; padding-bottom:0">
+        <div>
+          <div class="toggle-label">Dark Mode</div>
+          <div class="toggle-sub">Use dark color theme</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="set-dark-mode" checked>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Auth -->
+    <div class="card">
+      <div class="card-title"><i class="fa fa-lock"></i> Authentication</div>
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" class="form-control" id="set-username">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">New Password</label>
+        <input type="password" class="form-control" id="set-auth-password" placeholder="(leave blank to keep)">
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div style="display:flex; gap:8px; margin-top:4px">
+      <button class="btn btn-primary" style="flex:1" id="btn-save-settings"><i class="fa fa-floppy-disk"></i> Save</button>
+      <button class="btn btn-danger" id="btn-reboot"><i class="fa fa-power-off"></i> Reboot</button>
+    </div>
+
+    <!-- OTA -->
+    <div class="card" style="margin-top:4px">
+      <div class="card-title"><i class="fa fa-upload"></i> Firmware OTA Update</div>
+      <div class="form-group">
+        <input type="file" class="form-control" id="ota-file-input" accept=".bin">
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="progress-wrap">
+          <div class="progress-fill" id="ota-progress-bar" style="width:0%"></div>
+        </div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:4px" id="ota-progress-label"></div>
+      </div>
+      <button class="btn btn-warning btn-full" id="btn-ota-upload">
+        <i class="fa fa-upload"></i> Upload Firmware
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== PAGE: ABOUT ========== -->
+  <div class="page-section" id="page-about">
+    <div class="about-hero">
+      <div class="about-logo">🏍</div>
+      <div class="about-title">Honda ECU Tool</div>
+      <div class="about-version">K-Line Diagnostic &amp; Remapping · v1.0.0</div>
+    </div>
+
+    <div class="card">
+      <div class="info-row"><span class="info-label">Hardware</span><span class="info-value">ESP32 DOIT V1 + 4N25</span></div>
+      <div class="info-row"><span class="info-label">Protocol</span><span class="info-value">K-Line ISO 9141-2 / KWP2000</span></div>
+      <div class="info-row"><span class="info-label">Baudrate</span><span class="info-value">10400 bps</span></div>
+      <div class="info-row"><span class="info-label">WiFi SSID</span><span class="info-value">Honda ECU Tool</span></div>
+      <div class="info-row"><span class="info-label">Default IP</span><span class="info-value">192.168.4.1</span></div>
+      <div class="info-row"><span class="info-label">Framework</span><span class="info-value">Arduino ESP32 Core</span></div>
+      <div class="info-row"><span class="info-label">Libraries</span><span class="info-value" style="font-size:11px">ESPAsyncWebServer, ArduinoJson, LittleFS</span></div>
+    </div>
+
+    <div class="card" style="background:var(--warning-bg); border-color:var(--warning)">
+      <div style="font-size:12px; color:var(--warning)">
+        ⚠️ Alat ini hanya untuk tujuan diagnostik. Jangan gunakan untuk memodifikasi data ECU kendaraan secara sembarangan.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== BOTTOM NAVIGATION ===== -->
+<nav class="bottom-nav">
+  <div class="nav-tab active" data-page="dashboard">
+    <div class="nav-tab-icon"><i class="fa fa-gauge"></i></div>
+    <div class="nav-tab-label">Dashboard</div>
+  </div>
+  <div class="nav-tab" data-page="live">
+    <div class="nav-tab-icon"><i class="fa fa-chart-line"></i></div>
+    <div class="nav-tab-label">Live</div>
+  </div>
+  <div class="nav-tab" data-page="diagnostic">
+    <div class="nav-tab-icon">
+      <i class="fa fa-triangle-exclamation"></i>
+      <span class="nav-badge" id="nav-dtc-badge" style="display:none">0</span>
+    </div>
+    <div class="nav-tab-label">Diagnostics</div>
+  </div>
+  <div class="nav-tab" data-page="backup">
+    <div class="nav-tab-icon"><i class="fa fa-floppy-disk"></i></div>
+    <div class="nav-tab-label">Backup</div>
+  </div>
+  <div class="nav-tab" id="nav-more-btn">
+    <div class="nav-tab-icon"><i class="fa fa-ellipsis"></i></div>
+    <div class="nav-tab-label">More</div>
+  </div>
+</nav>
+
+<!-- ===== SCRIPTS ===== -->
+<script src="js/api.js"></script>
+<script src="js/live.js"></script>
+<script src="js/dtc.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/terminal.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/mapeditor.js"></script>
+<script src="js/flashui.js"></script>
+<script src="js/filemanager.js"></script>
+
+<script>
+// ============================================================
+// MOBILE APP SHELL
+// ============================================================
+const App = (() => {
+  let _currentPage = 'dashboard';
+  let _theme = localStorage.getItem('theme') || 'dark';
+  let _statusPollTimer = null;
+
+  // ---- Toast ----
+  function toast(type, title, msg, duration = 3500) {
+    const icons = { success:'✅', error:'❌', warning:'⚠️', info:'ℹ️' };
+    const c = document.getElementById('toast-container');
+    if (!c) return;
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `
+      <div class="toast-icon">${icons[type] || '●'}</div>
+      <div class="toast-msg">
+        <div class="toast-title">${title}</div>
+        ${msg ? `<div class="toast-body">${msg}</div>` : ''}
+      </div>`;
+    c.appendChild(el);
+    setTimeout(() => el.remove(), duration);
+  }
+
+  // ---- Theme ----
+  function applyTheme(t) {
+    _theme = t;
+    // Mobile keeps dark mode always for now (ECU tool aesthetic)
+    localStorage.setItem('theme', t);
+  }
+
+  // ---- Navigation ----
+  function navigate(page) {
+    _currentPage = page;
+
+    // Update bottom nav
+    document.querySelectorAll('.nav-tab[data-page]').forEach(n => {
+      n.classList.toggle('active', n.dataset.page === page);
+    });
+
+    // Update drawer nav
+    document.querySelectorAll('.drawer-nav-item[data-page]').forEach(n => {
+      n.classList.toggle('active', n.dataset.page === page);
+    });
+
+    // Show page
+    document.querySelectorAll('.page-section').forEach(s => {
+      s.classList.toggle('active', s.id === `page-${page}`);
+    });
+
+    // Close drawer if open
+    closeDrawer();
+
+    // Scroll top
+    const body = document.getElementById('app-body');
+    if (body) body.scrollTop = 0;
+  }
+
+  // ---- Drawer ----
+  function openDrawer() {
+    document.getElementById('more-drawer').classList.add('open');
+    document.getElementById('drawer-overlay').classList.add('show');
+    document.getElementById('nav-more-btn').classList.add('active');
+  }
+
+  function closeDrawer() {
+    document.getElementById('more-drawer').classList.remove('open');
+    document.getElementById('drawer-overlay').classList.remove('show');
+    document.getElementById('nav-more-btn').classList.remove('active');
+  }
+
+  // ---- Status bar ----
+  function updateStatusBar(status) {
+    const pill = document.getElementById('ecu-pill');
+    const pillDot = document.getElementById('ecu-pill-dot');
+    const pillTxt = document.getElementById('ecu-pill-txt');
+    const wsDot = document.getElementById('dash-ws-status');
+
+    if (status.ecuConnected) {
+      pill.className = 'ecu-status-pill connected';
+      pillDot.className = 'ecu-dot green';
+      pillTxt.textContent = 'ECU Online';
+    } else {
+      pill.className = 'ecu-status-pill disconnected';
+      pillDot.className = 'ecu-dot red';
+      pillTxt.textContent = 'Offline';
+    }
+
+    if (wsDot) wsDot.textContent = API.isWsConnected ? 'Online' : 'Offline';
+  }
+
+  // ---- Dashboard cards update ----
+  function updateDashboard(status) {
+    const set = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
+    };
+
+    set('dash-uptime-sub', 'Uptime: ' + formatUptime(status.uptime || 0));
+    set('dash-version', status.version || '-');
+    set('dash-heap', ((status.freeHeap || 0)/1024).toFixed(1) + ' KB');
+    set('dash-vbat', (status.battVoltage || 0).toFixed(2));
+    set('dash-cpu', (status.cpuTemp || 0).toFixed(1));
+
+    const pct = status.fsTotal ? Math.round(status.fsUsed / status.fsTotal * 100) : 0;
+    set('dash-fs-pct-m', pct + '%');
+
+    const bar = document.getElementById('dash-fs-bar');
+    if (bar) bar.style.width = pct + '%';
+    set('dash-fs-detail', `${pct}% used — ${formatBytes(status.fsUsed)} / ${formatBytes(status.fsTotal)}`);
+
+    const stateEl = document.getElementById('dash-ecu-state');
+    if (stateEl) {
+      const label = ecuStateLabel(status.ecuState);
+      stateEl.textContent = label;
+      stateEl.className = 'ecu-hero-state ' + (status.ecuConnected ? 'connected' : 'disconnected');
+    }
+  }
+
+  // ---- Connect handlers ----
+  async function handleConnect() {
+    const btn = document.getElementById('btn-connect');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Connecting…';
+    try {
+      await API.connect();
+      toast('success', 'ECU Connected', 'Session started');
+      refreshStatus();
+    } catch (e) {
+      toast('error', 'Connect Failed', e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa fa-plug"></i> Connect ECU';
+    }
+  }
+
+  async function handleDisconnect() {
+    try {
+      await API.disconnect();
+      toast('info', 'ECU Disconnected', '');
+      refreshStatus();
+    } catch (e) {
+      toast('error', 'Error', e.message);
+    }
+  }
+
+  async function refreshStatus() {
+    try {
+      const s = await API.status();
+      updateStatusBar(s);
+      updateDashboard(s);
+    } catch {}
+  }
+
+  // ---- Helpers ----
+  function formatUptime(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
+    return `${h}h ${m % 60}m ${s % 60}s`;
+  }
+
+  function formatBytes(b) {
+    if (!b) return '0 B';
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1024 / 1024).toFixed(2) + ' MB';
+  }
+
+  function ecuStateLabel(n) {
+    return ['Disconnected', 'Connecting', 'Connected', 'Error'][n] || 'Unknown';
+  }
+
+  // ---- WS setup ----
+  function setupWS() {
+    API.wsConnect();
+
+    API.onWS('live', (msg) => {
+      if (msg.data) {
+        Live.updateCards(msg.data);
+        if (typeof MapEditor !== 'undefined' && MapEditor.updateLiveCursor) {
+          MapEditor.updateLiveCursor(msg.data.rpm || 0, msg.data.tps || 0);
+        }
+      }
+    });
+
+    API.onWS('status', () => refreshStatus());
+
+    API.onWS('flash_progress', (msg) => {
+      if (typeof FlashUI !== 'undefined') FlashUI.handleWSEvent(msg);
+    });
+
+    API.onWS('open', () => {
+      const ws = document.getElementById('dash-ws-status');
+      if (ws) ws.textContent = 'Online';
+    });
+
+    API.onWS('close', () => {
+      const ws = document.getElementById('dash-ws-status');
+      if (ws) ws.textContent = 'Offline';
+    });
+  }
+
+  // ---- Init ----
+  function init() {
+    applyTheme(_theme);
+
+    // Bottom nav tabs
+    document.querySelectorAll('.nav-tab[data-page]').forEach(tab => {
+      tab.addEventListener('click', () => navigate(tab.dataset.page));
+    });
+
+    // More button
+    const moreBtn = document.getElementById('nav-more-btn');
+    if (moreBtn) moreBtn.addEventListener('click', openDrawer);
+
+    // Drawer items
+    document.querySelectorAll('.drawer-nav-item[data-page]').forEach(item => {
+      item.addEventListener('click', () => navigate(item.dataset.page));
+    });
+
+    // Drawer close
+    document.getElementById('drawer-close-btn').addEventListener('click', closeDrawer);
+    document.getElementById('drawer-overlay').addEventListener('click', closeDrawer);
+
+    // ECU pill
+    document.getElementById('btn-connect').addEventListener('click', handleConnect);
+    document.getElementById('btn-disconnect').addEventListener('click', handleDisconnect);
+
+    // Theme button
+    document.getElementById('btn-theme-m').addEventListener('click', () => {
+      _theme = _theme === 'dark' ? 'light' : 'dark';
+      applyTheme(_theme);
+      toast('info', 'Theme', `Switched to ${_theme} mode`);
+    });
+
+    setupWS();
+    refreshStatus();
+    _statusPollTimer = setInterval(refreshStatus, 5000);
+
+    navigate('dashboard');
+    Live.init();
+    Diag.init();
+    BackupUI.init();
+    Terminal.init();
+    SettingsUI.init();
+    if (typeof MapEditor !== 'undefined') MapEditor.init();
+    if (typeof FlashUI !== 'undefined') FlashUI.init();
+    if (typeof FileManager !== 'undefined') FileManager.init();
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  }
+
+  return { init, toast, navigate, applyTheme, refreshStatus, formatBytes, formatUptime };
+})();
+
+// ---- Pill connect helper (inline onclick) ----
+function handlePillConnect() {
+  const pill = document.getElementById('ecu-pill');
+  if (pill.classList.contains('connected')) {
+    document.getElementById('btn-disconnect').click();
+  } else {
+    document.getElementById('btn-connect').click();
+  }
+}
+
+// ---- Inline logger page buttons ----
+document.addEventListener('DOMContentLoaded', () => {
+  App.init();
+
+  // Read ECU ID (Vehicle page)
+  const btnReadId = document.getElementById('btn-read-ecu-id');
+  if (btnReadId) {
+    btnReadId.addEventListener('click', () => {
+      btnReadId.disabled = true;
+      btnReadId.innerHTML = '<div class="spinner"></div>';
+      API.readId()
+        .then(d => {
+          const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+          set('ecu-mfr',    d.manufacturer || '—');
+          set('ecu-part',   d.partNumber   || '—');
+          set('ecu-fw',     d.fwVersion    || '—');
+          set('ecu-hw',     d.hwVersion    || '—');
+          set('ecu-proto',  d.protocol     || '—');
+          set('ecu-eeprom', (d.eepromSize  || 0) + ' bytes');
+          set('ecu-chk',    '0x' + ((d.checksum || 0).toString(16).toUpperCase()));
+          App.toast('success', 'ECU ID Read', d.partNumber || 'OK');
+        })
+        .catch(e => App.toast('error', 'Read ID Failed', e.message))
+        .finally(() => {
+          btnReadId.disabled = false;
+          btnReadId.innerHTML = '<i class="fa fa-id-card"></i> Read ID';
+        });
+    });
+  }
+
+  // Logger
+  const btnLogStart   = document.getElementById('btn-log-start');
+  const btnLogStop    = document.getElementById('btn-log-stop');
+  const btnLogRefresh = document.getElementById('btn-log-refresh');
+  const logOutput     = document.getElementById('log-output');
+
+  if (btnLogStart) {
+    btnLogStart.addEventListener('click', () =>
+      API.startLog()
+        .then(r => App.toast('success', 'Logging started', r.file || ''))
+        .catch(e => App.toast('error', 'Error', e.message)));
+  }
+
+  if (btnLogStop) {
+    btnLogStop.addEventListener('click', () =>
+      API.stopLog()
+        .then(() => App.toast('info', 'Log stopped', ''))
+        .catch(e => App.toast('error', 'Error', e.message)));
+  }
+
+  if (btnLogRefresh) {
+    btnLogRefresh.addEventListener('click', () => {
+      API.log(100).then(r => {
+        if (!logOutput) return;
+        logOutput.innerHTML = '';
+        const colors = { INF: '#22c55e', WRN: '#f59e0b', ERR: '#ef4444', DBG: '#8a91a8' };
+        (r.logs || []).forEach(l => {
+          const d = document.createElement('div');
+          d.style.cssText = 'padding:1px 0';
+          const ts    = (l.ts / 1000).toFixed(3);
+          const color = colors[l.level] || '#f0f2f8';
+          d.innerHTML =
+            `<span style="color:var(--text-muted)">[${ts}]</span> ` +
+            `<span style="color:${color}">${l.level}</span> ` +
+            `[${l.tag}] ${l.msg}`;
+          logOutput.appendChild(d);
+        });
+        logOutput.scrollTop = logOutput.scrollHeight;
+      }).catch(e => App.toast('error', 'Error', e.message));
+    });
+  }
+
+  // Rebuild backup list to be mobile-friendly
+  patchBackupUI();
+  patchDiagUI();
+});
+
+// Patch BackupUI to use mobile file item style
+function patchBackupUI() {
+  if (typeof BackupUI === 'undefined') return;
+  const origRender = BackupUI._renderFiles;
+
+  // Override after init
+  setTimeout(() => {
+    const origRefresh = document.getElementById('btn-refresh-backups');
+    if (origRefresh) {
+      origRefresh.addEventListener('click', () => {
+        API.files('/backup').then(data => {
+          const list = document.getElementById('backup-file-list');
+          if (!list) return;
+          const files = data.files || [];
+          if (files.length === 0) {
+            list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px">No backup files found.</div>';
+            return;
+          }
+          list.innerHTML = files.map(f => `
+            <div class="file-item">
+              <div class="file-icon">💾</div>
+              <div class="file-info">
+                <div class="file-name">${f.name}</div>
+                <div class="file-meta">${App.formatBytes(f.size)} · ${f.date || '—'}</div>
+              </div>
+              <div class="file-actions">
+                <button class="btn btn-secondary btn-sm" onclick="API.downloadBackup('${f.name}')"><i class="fa fa-download"></i></button>
+              </div>
+            </div>
+          `).join('');
+        });
+      });
+    }
+  }, 500);
+}
+
+// Patch Diag DTC display to mobile cards
+function patchDiagUI() {
+  if (typeof Diag === 'undefined') return;
+
+  document.getElementById('btn-read-dtc')?.addEventListener('click', () => {
+    App.toast('info', 'Scanning DTC', 'Reading fault codes...');
+    API.readDTC().then(data => {
+      const list = document.getElementById('dtc-list');
+      const badge = document.getElementById('dtc-count-badge');
+      const navBadge = document.getElementById('nav-dtc-badge');
+      const codes = data.codes || [];
+
+      if (badge) badge.textContent = codes.length;
+      if (navBadge) {
+        navBadge.textContent = codes.length;
+        navBadge.style.display = codes.length > 0 ? 'flex' : 'none';
+      }
+
+      if (!list) return;
+      if (codes.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:32px;color:var(--success)"><i class="fa fa-circle-check" style="font-size:32px;margin-bottom:8px;display:block"></i>No fault codes found. System OK!</div>';
+        return;
+      }
+
+      list.innerHTML = codes.map(c => `
+        <div class="dtc-item">
+          <div class="dtc-code">${c.code || c.id || '?'}</div>
+          <div class="dtc-desc">
+            <div class="dtc-desc-title">${c.description || 'Unknown Fault'}</div>
+            <div class="dtc-desc-sub">Status: ${c.status || '—'}</div>
+          </div>
+          <span class="mil-badge ${c.mil ? 'mil-on' : 'mil-off'}">${c.mil ? 'MIL ON' : 'MIL OFF'}</span>
+        </div>
+      `).join('');
+
+      App.toast(codes.length > 0 ? 'warning' : 'success',
+        codes.length > 0 ? `${codes.length} fault code(s) found` : 'No faults',
+        '');
+    }).catch(e => App.toast('error', 'DTC Read Failed', e.message));
+  }, { once: true });
+}
+</script>
+
+<style>
+  /* hide map editor table inherited styles on mobile */
+  .map-table th, .map-table td { min-width: 38px; height: 28px; font-size: 11px; }
+  .map-cell { font-size: 11px; }
+
+  /* page section page-section already hidden in html default */
+  .page-section { display: none; }
+  .page-section.active { display: block; }
+</style>
+</body>
+</html>

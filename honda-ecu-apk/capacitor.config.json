@@ -1,0 +1,22 @@
+{
+  "appId": "com.hondaecutool.app",
+  "appName": "Honda ECU Tool",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#0f1117",
+    "buildOptions": {
+      "keystorePath": null,
+      "keystoreAlias": null,
+      "keystorePassword": null,
+      "keystoreAliasPassword": null
+    }
+  },
+  "plugins": {
+    "Network": {}
+  }
+}

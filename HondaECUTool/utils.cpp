@@ -4,7 +4,6 @@
 #include "include/utils.h"
 #include <ArduinoJson.h>
 #include <esp_system.h>
-#include <esp_idf_version.h>
 
 namespace Utils {
 
@@ -67,9 +66,10 @@ String heapJson() {
 }
 
 float cpuTemperature() {
-    // ESP32 Arduino Core 3.x menyediakan temperatureRead() sebagai wrapper
-    // built-in tanpa perlu driver tambahan
-    return temperatureRead();
+    // ESP32 internal temperature sensor (approximate, not calibrated)
+    extern uint8_t temprature_sens_read();  // ROM function
+    uint8_t raw = temprature_sens_read();
+    return (raw - 32) / 1.8f;
 }
 
 float mapFloat(float x, float inMin, float inMax, float outMin, float outMax) {
