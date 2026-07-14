@@ -17,7 +17,7 @@
 
 <br/>
 
-<img src="screen shot/Screenshot 2026-07-14 233720.png" width="300">
+<img src="screen shot/Screenshot 2026-07-14 233720.png" width="600">
 
 </div>
 
