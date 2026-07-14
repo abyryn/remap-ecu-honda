@@ -17,7 +17,7 @@
 
 <br/>
 
-![Dashboard Preview](screen shot/Screenshot 2026-07-14 233720.png)
+<img src="screen shot/Screenshot 2026-07-14 233720.png" width="300">
 
 </div>
 
