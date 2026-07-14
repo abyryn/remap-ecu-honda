@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏍️ Honda ECU K-Line Diagnostic Tool
+# 🏍️ WRT Garage
 
 **Alat diagnostik ECU Honda berbasis ESP32 dengan antarmuka web modern**
 
