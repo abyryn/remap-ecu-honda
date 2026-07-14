@@ -1,0 +1,20 @@
+{
+  "path": "/backup",
+  "files": [
+    {
+      "name": "eeprom_20260714_091532.bin",
+      "size": 1024,
+      "modified": 1752487432
+    },
+    {
+      "name": "eeprom_20260710_143022.bin",
+      "size": 1024,
+      "modified": 1752141022
+    },
+    {
+      "name": "full_flash_20260708_080145.bin",
+      "size": 65536,
+      "modified": 1751968905
+    }
+  ]
+}

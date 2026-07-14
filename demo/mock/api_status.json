@@ -1,0 +1,12 @@
+{
+  "device": "Honda ECU Tool",
+  "version": "1.0.0",
+  "uptime": 45231000,
+  "ecuState": 2,
+  "ecuConnected": true,
+  "battVoltage": 12.43,
+  "freeHeap": 234560,
+  "fsTotal": 1048576,
+  "fsUsed": 204800,
+  "cpuTemp": 52.3
+}

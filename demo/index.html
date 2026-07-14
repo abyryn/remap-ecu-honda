@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Honda ECU Tool — Demo UI</title>
+  <meta name="description"
+    content="Demo antarmuka web Honda ECU K-Line Diagnostic Tool berbasis ESP32 — data dari JSON mock files">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+  <style>
+    :root {
+      --red: #e8343a;
+      --red-dark: #b01e24;
+      --red-glow: rgba(232, 52, 58, .35);
+      --orange: #f5851f;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --blue: #3b82f6;
+      --cyan: #06b6d4;
+      --bg: #0d0f17;
+      --bg-2: #131622;
+      --bg-3: #1a1d2e;
+      --bg-card: rgba(24, 27, 44, .85);
+      --border: rgba(255, 255, 255, .07);
+      --border-2: rgba(255, 255, 255, .12);
+      --text: #e2e4ef;
+      --text-2: #8b8fa8;
+      --text-3: #5a5e78;
+      --sidebar-w: 240px;
+      --topbar-h: 60px;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --trans: .2s cubic-bezier(.4, 0, .2, 1)
+    }
+
+    [data-theme=light] {
+      --bg: #f0f2f8;
+      --bg-2: #e4e7f0;
+      --bg-3: #d8dce8;
+      --bg-card: rgba(255, 255, 255, .9);
+      --border: rgba(0, 0, 0, .08);
+      --border-2: rgba(0, 0, 0, .14);
+      --text: #1a1d2e;
+      --text-2: #5a5e78;
+      --text-3: #8b8fa8
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+      transition: background var(--trans), color var(--trans)
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-2)
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-2);
+      border-radius: 99px
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--red)
+    }
+
+    .sidebar {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: var(--bg-2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 200;
+      transition: transform var(--trans);
+      overflow-y: auto
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 18px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--red), var(--red-dark));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 14px var(--red-glow);
+      flex-shrink: 0
+    }
+
+    .logo-text {
+      font-weight: 700;
+      font-size: 13px;
+      line-height: 1.3
+    }
+
+    .logo-text span {
+      display: block;
+      font-size: 10px;
+      color: var(--text-2);
+      font-weight: 400
+    }
+
+    .sidebar-nav {
+      padding: 12px 0;
+      flex: 1
+    }
+
+    .nav-section {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      padding: 14px 18px 6px
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 18px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-2);
+      transition: background var(--trans), color var(--trans);
+      position: relative
+    }
+
+    .nav-item i {
+      width: 16px;
+      text-align: center;
+      font-size: 13px
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, .04);
+      color: var(--text)
+    }
+
+    .nav-item.active {
+      color: var(--red);
+      background: rgba(232, 52, 58, .08);
+      font-weight: 600
+    }
+
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--red);
+      border-radius: 0 3px 3px 0
+    }
+
+    .badge {
+      margin-left: auto;
+      background: var(--red);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+      min-width: 20px;
+      text-align: center
+    }
+
+    .main-content {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh
+    }
+
+    .topbar {
+      height: var(--topbar-h);
+      background: var(--bg-2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100
+    }
+
+    .topbar-title {
+      font-weight: 600;
+      font-size: 15px;
+      flex: 1
+    }
+
+    .demo-pill {
+      background: rgba(234, 179, 8, .15);
+      color: var(--yellow);
+      border: 1px solid rgba(234, 179, 8, .3);
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px
+    }
+
+    .ecu-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-2)
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pdot 2s infinite
+    }
+
+    .status-dot.offline {
+      background: var(--text-3);
+      box-shadow: none;
+      animation: none
+    }
+
+    @keyframes pdot {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .4
+      }
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--trans);
+      white-space: nowrap
+    }
+
+    .btn-primary {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 4px 16px var(--red-glow)
+    }
+
+    .btn-primary:hover {
+      background: var(--red-dark);
+      transform: translateY(-1px)
+    }
+
+    .btn-secondary {
+      background: var(--bg-3);
+      color: var(--text-2);
+      border: 1px solid var(--border)
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--red);
+      color: var(--red)
+    }
+
+    .btn-success {
+      background: rgba(34, 197, 94, .12);
+      color: var(--green);
+      border: 1px solid rgba(34, 197, 94, .3)
+    }
+
+    .btn-success:hover {
+      background: rgba(34, 197, 94, .2)
+    }
+
+    .btn-danger {
+      background: rgba(232, 52, 58, .12);
+      color: var(--red);
+      border: 1px solid var(--red-glow)
+    }
+
+    .btn-danger:hover {
+      background: rgba(232, 52, 58, .22)
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px
+    }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      justify-content: center
+    }
+
+    .page-body {
+      padding: 24px;
+      flex: 1
+    }
+
+    .page-section {
+      display: none
+    }
+
+    .page-section.active {
+      display: block
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, 1fr)
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, 1fr)
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, 1fr)
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      backdrop-filter: blur(16px);
+      transition: border-color var(--trans), box-shadow var(--trans)
+    }
+
+    .card:hover {
+      border-color: var(--border-2);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .2)
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--text-2);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .card-title i {
+      color: var(--red)
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .section-title i {
+      color: var(--red)
+    }
+
+    .metric-value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.1
+    }
+
+    .metric-unit {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text-2);
+      margin-left: 3px
+    }
+
+    .metric-sub {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 4px
+    }
+
+    .sensor-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      transition: all var(--trans)
+    }
+
+    .sensor-card:hover {
+      border-color: rgba(232, 52, 58, .3)
+    }
+
+    .sensor-name {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 6px
+    }
+
+    .sensor-value {
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1
+    }
+
+    .sensor-unit {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-2);
+      margin-left: 3px
+    }
+
+    .sensor-bar {
+      margin-top: 8px;
+      height: 3px;
+      background: var(--bg-3);
+      border-radius: 99px;
+      overflow: hidden
+    }
+
+    .sensor-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--red), var(--orange));
+      border-radius: 99px;
+      transition: width .6s ease
+    }
+
+    .dtc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px
+    }
+
+    .dtc-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      border-bottom: 1px solid var(--border)
+    }
+
+    .dtc-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .04);
+      vertical-align: middle
+    }
+
+    .dtc-table tr:hover td {
+      background: rgba(255, 255, 255, .02)
+    }
+
+    .dtc-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--red);
+      font-size: 13px
+    }
+
+    .dtc-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 99px
+    }
+
+    .dtc-pill.active {
+      background: rgba(232, 52, 58, .15);
+      color: var(--red)
+    }
+
+    .dtc-pill.pending {
+      background: rgba(234, 179, 8, .12);
+      color: var(--yellow)
+    }
+
+    .dtc-pill.ok {
+      background: rgba(34, 197, 94, .1);
+      color: var(--green)
+    }
+
+    .map-table {
+      border-collapse: collapse;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px
+    }
+
+    .map-table td,
+    .map-table th {
+      border: 1px solid rgba(255, 255, 255, .05);
+      padding: 0;
+      text-align: center
+    }
+
+    .map-table th {
+      background: var(--bg-3);
+      color: var(--text-2);
+      font-size: 10px;
+      padding: 5px 8px;
+      white-space: nowrap
+    }
+
+    .map-cell {
+      width: 54px;
+      height: 34px;
+      border: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      text-align: center;
+      transition: all .15s;
+      outline: none;
+      cursor: pointer
+    }
+
+    .map-cell:focus {
+      box-shadow: 0 0 0 2px var(--red) inset;
+      z-index: 10;
+      position: relative
+    }
+
+    .map-cell:hover {
+      filter: brightness(1.3)
+    }
+
+    .log-entry {
+      display: flex;
+      gap: 12px;
+      padding: 6px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      border-bottom: 1px solid rgba(255, 255, 255, .03)
+    }
+
+    .log-entry:hover {
+      background: rgba(255, 255, 255, .03)
+    }
+
+    .log-ts {
+      color: var(--text-3);
+      min-width: 80px
+    }
+
+    .log-level {
+      min-width: 32px;
+      font-weight: 700
+    }
+
+    .log-level.INF {
+      color: var(--green)
+    }
+
+    .log-level.WRN {
+      color: var(--yellow)
+    }
+
+    .log-level.ERR {
+      color: var(--red)
+    }
+
+    .log-tag {
+      color: var(--cyan);
+      min-width: 48px
+    }
+
+    .log-msg {
+      color: var(--text-2);
+      flex: 1
+    }
+
+    .terminal-output {
+      background: #0a0c14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      height: 280px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #7fe7c4
+    }
+
+    .terminal-input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px
+    }
+
+    .terminal-input {
+      flex: 1;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color var(--trans)
+    }
+
+    .terminal-input:focus {
+      border-color: var(--red)
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--bg-3);
+      border-radius: 99px;
+      overflow: hidden;
+      margin: 8px 0
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--red), var(--orange));
+      border-radius: 99px;
+      transition: width .4s ease
+    }
+
+    .progress-fill.animate {
+      background: linear-gradient(90deg, var(--red), var(--orange), var(--red));
+      background-size: 200% 100%;
+      animation: prog 1.5s linear infinite
+    }
+
+    @keyframes prog {
+      0% {
+        background-position: 0%
+      }
+
+      100% {
+        background-position: 200%
+      }
+    }
+
+    .form-group {
+      margin-bottom: 18px
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      margin-bottom: 7px
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color var(--trans)
+    }
+
+    .form-control:focus {
+      border-color: var(--red)
+    }
+
+    select.form-control {
+      cursor: pointer
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, .04);
+      transition: background var(--trans)
+    }
+
+    .file-item:hover {
+      background: rgba(255, 255, 255, .03)
+    }
+
+    .file-icon {
+      color: var(--text-3);
+      width: 18px;
+      text-align: center
+    }
+
+    .file-name {
+      flex: 1;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace
+    }
+
+    .file-size {
+      font-size: 11px;
+      color: var(--text-3);
+      width: 70px;
+      text-align: right
+    }
+
+    .file-date {
+      font-size: 11px;
+      color: var(--text-3);
+      width: 110px;
+      text-align: right
+    }
+
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .toast {
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 18px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+      animation: tin .3s ease;
+      max-width: 320px
+    }
+
+    .toast.success {
+      border-color: rgba(34, 197, 94, .4)
+    }
+
+    .toast.success i {
+      color: var(--green)
+    }
+
+    .toast.error {
+      border-color: rgba(232, 52, 58, .4)
+    }
+
+    .toast.error i {
+      color: var(--red)
+    }
+
+    .toast.info {
+      border-color: rgba(59, 130, 246, .4)
+    }
+
+    .toast.info i {
+      color: var(--blue)
+    }
+
+    @keyframes tin {
+      from {
+        transform: translateX(100%);
+        opacity: 0
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1
+      }
+    }
+
+    .vehicle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px
+    }
+
+    .vehicle-card {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--trans)
+    }
+
+    .vehicle-card:hover {
+      border-color: var(--red);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px var(--red-glow)
+    }
+
+    .vehicle-card.selected {
+      border-color: var(--red);
+      background: rgba(232, 52, 58, .07)
+    }
+
+    .vehicle-icon {
+      font-size: 28px;
+      margin-bottom: 8px
+    }
+
+    .vehicle-name {
+      font-size: 12px;
+      font-weight: 600
+    }
+
+    .vehicle-sub {
+      font-size: 10px;
+      color: var(--text-3);
+      margin-top: 3px
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: 10px;
+      font-weight: 600
+    }
+
+    .chip-green {
+      background: rgba(34, 197, 94, .12);
+      color: var(--green)
+    }
+
+    .chip-red {
+      background: rgba(232, 52, 58, .12);
+      color: var(--red)
+    }
+
+    .chip-blue {
+      background: rgba(59, 130, 246, .12);
+      color: var(--blue)
+    }
+
+    .chip-yellow {
+      background: rgba(234, 179, 8, .12);
+      color: var(--yellow)
+    }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .6);
+      z-index: 150
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-2);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px
+    }
+
+    @media(max-width:900px) {
+      .grid-4 {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+
+    @media(max-width:700px) {
+      .sidebar {
+        transform: translateX(-100%)
+      }
+
+      .sidebar.open {
+        transform: translateX(0)
+      }
+
+      .sidebar-overlay {
+        display: block;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--trans)
+      }
+
+      .sidebar-overlay.show {
+        opacity: 1;
+        pointer-events: all
+      }
+
+      .main-content {
+        margin-left: 0
+      }
+
+      .menu-toggle {
+        display: block
+      }
+
+      .grid-4,
+      .grid-3,
+      .grid-2 {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    @media(max-width:480px) {
+
+      .grid-4,
+      .grid-3,
+      .grid-2 {
+        grid-template-columns: 1fr
+      }
+
+      .page-body {
+        padding: 14px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="toast-container"></div>
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🏍</div>
+      <div class="logo-text">WRT Garage<span>By @abiriann.ab</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Main</div>
+      <div class="nav-item active" data-page="dashboard"><i class="fa fa-gauge"></i> Dashboard</div>
+      <div class="nav-item" data-page="vehicle"><i class="fa fa-motorcycle"></i> Vehicle</div>
+      <div class="nav-section">Diagnostics</div>
+      <div class="nav-item" data-page="live"><i class="fa fa-chart-line"></i> Live Data</div>
+      <div class="nav-item" data-page="diagnostic"><i class="fa fa-triangle-exclamation"></i> Diagnostic <span
+          class="badge" id="dtc-count-badge">3</span></div>
+      <div class="nav-section">Tuning</div>
+      <div class="nav-item" data-page="mapeditor"><i class="fa fa-table-cells"></i> Map Editor</div>
+      <div class="nav-item" data-page="flash"><i class="fa fa-microchip"></i> Flash ECU</div>
+      <div class="nav-section">Storage</div>
+      <div class="nav-item" data-page="backup"><i class="fa fa-floppy-disk"></i> Backup</div>
+      <div class="nav-item" data-page="files"><i class="fa fa-folder-open"></i> File Manager</div>
+      <div class="nav-section">Tools</div>
+      <div class="nav-item" data-page="terminal"><i class="fa fa-terminal"></i> Terminal</div>
+      <div class="nav-item" data-page="logger"><i class="fa fa-file-lines"></i> Logs</div>
+      <div class="nav-section">System</div>
+      <div class="nav-item" data-page="settings"><i class="fa fa-gear"></i> Settings</div>
+      <div class="nav-item" data-page="about"><i class="fa fa-circle-info"></i> About</div>
+    </nav>
+  </aside>
+  <div class="main-content">
+    <div class="topbar">
+      <button class="menu-toggle" id="menu-toggle"><i class="fa fa-bars"></i></button>
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <!--<div class="demo-pill"><i class="fa fa-flask"></i> Demo Mode — JSON Mock</div>-->
+      <div class="ecu-status">
+        <div class="status-dot" id="ecu-dot"></div><span id="ecu-status-text">ECU Connected</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btn-theme"><i class="fa fa-moon"></i></button>
+    </div>
+    <div class="page-body">
+      <div class="page-section active" id="page-dashboard">
+        <div class="section-title"><i class="fa fa-gauge"></i> Dashboard</div>
+        <div class="grid grid-4" style="margin-bottom:18px">
+          <div class="card">
+            <div class="card-title"><i class="fa fa-clock"></i> Uptime</div>
+            <div class="metric-value" id="dash-uptime">—</div>
+            <div class="metric-sub">ESP32 online time</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa fa-bolt"></i> Battery</div>
+            <div class="metric-value" id="dash-vbat">— <span class="metric-unit">V</span></div>
+            <div class="metric-sub">OBD voltage</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa fa-memory"></i> Free Heap</div>
+            <div class="metric-value" id="dash-heap">—</div>
+            <div class="metric-sub">ESP32 RAM</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa fa-thermometer-half"></i> CPU Temp</div>
+            <div class="metric-value" id="dash-temp">— <span class="metric-unit">°C</span></div>
+            <div class="metric-sub">Internal sensor</div>
+          </div>
+        </div>
+        <div class="grid grid-2" style="margin-bottom:18px">
+          <div class="card">
+            <div class="card-title"><i class="fa fa-circle-info"></i> ECU Info</div>
+            <table style="width:100%;font-size:13px;border-collapse:collapse">
+              <tr>
+                <td style="color:var(--text-3);padding:5px 0;width:130px">Part Number</td>
+                <td id="info-pn">—</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-3);padding:5px 0">Firmware</td>
+                <td id="info-fw">—</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-3);padding:5px 0">Hardware</td>
+                <td id="info-hw">—</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-3);padding:5px 0">Protocol</td>
+                <td id="info-proto">—</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-3);padding:5px 0">EEPROM</td>
+                <td id="info-eeprom">—</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-3);padding:5px 0">Flash</td>
+                <td id="info-flash">—</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-3);padding:5px 0">VIN</td>
+                <td id="info-vin" style="font-family:monospace;font-size:12px">—</td>
+              </tr>
+            </table>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa fa-hdd"></i> Storage</div>
+            <div style="margin-bottom:10px">
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span>LittleFS
+                  Usage</span><span id="fs-pct">—%</span></div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="fs-bar" style="width:0%"></div>
+              </div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:5px" id="fs-detail">—</div>
+            </div>
+            <div class="card-title" style="margin-top:14px"><i class="fa fa-triangle-exclamation"></i> Active DTCs</div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+              <div style="font-size:36px;font-weight:700;color:var(--red)" id="dash-dtc-count">—</div>
+              <div style="font-size:12px;color:var(--text-2)">fault codes<br><span id="dash-mil-status">—</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fa fa-chart-bar"></i> Quick Sensor Preview</div>
+          <div class="grid grid-4" style="margin-top:10px" id="mini-sensors"></div>
+        </div>
+      </div>
+      <div class="page-section" id="page-vehicle">
+        <div class="section-title"><i class="fa fa-motorcycle"></i> Vehicle Selection</div>
+        <p style="color:var(--text-2);margin-bottom:18px;font-size:13px">Pilih model Honda untuk menyesuaikan protokol
+          K-Line dan definisi map ECU.</p>
+        <div class="vehicle-grid" id="vehicle-grid"></div>
+      </div>
+      <div class="page-section" id="page-live">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div class="section-title" style="margin:0"><i class="fa fa-chart-line"></i> Live Data</div>
+          <div style="display:flex;gap:8px">
+            <span class="chip chip-green" id="live-loop-status"><i class="fa fa-circle"></i> Closed Loop</span>
+            <button class="btn btn-primary btn-sm" id="btn-refresh-live"><i class="fa fa-rotate"></i> Refresh</button>
+          </div>
+        </div>
+        <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px" id="sensor-grid">
+        </div>
+        <div class="card" style="margin-top:18px">
+          <div class="card-title"><i class="fa fa-chart-area"></i> RPM History</div><canvas id="rpm-chart"
+            height="120"></canvas>
+        </div>
+      </div>
+      <div class="page-section" id="page-diagnostic">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div class="section-title" style="margin:0"><i class="fa fa-triangle-exclamation"></i> Diagnostic Trouble
+            Codes</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" id="btn-read-dtc"><i class="fa fa-rotate"></i> Read DTC</button>
+            <button class="btn btn-danger btn-sm" id="btn-clear-dtc"><i class="fa fa-trash"></i> Clear DTC</button>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px;display:flex;gap:24px;align-items:center">
+          <div style="text-align:center">
+            <div style="font-size:40px;font-weight:700;color:var(--red)" id="dtc-total">3</div>
+            <div style="font-size:11px;color:var(--text-2)">Total DTCs</div>
+          </div>
+          <div style="height:50px;width:1px;background:var(--border)"></div>
+          <div>
+            <div style="font-size:13px;font-weight:600" id="dtc-mil-text">MIL Lamp: <span
+                style="color:var(--red)">ON</span></div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:5px">Active + Pending fault codes</div>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table class="dtc-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>MIL</th>
+              </tr>
+            </thead>
+            <tbody id="dtc-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="page-section" id="page-mapeditor">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div class="section-title" style="margin:0"><i class="fa fa-table-cells"></i> Map Editor</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="display:flex;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px;margin-right:8px">
+              <button class="btn btn-sm" id="btn-map-view-table" style="background:var(--red);color:#fff;padding:4px 10px;border-radius:6px;border:none;cursor:pointer"><i class="fa fa-table"></i> Table</button>
+              <button class="btn btn-sm" id="btn-map-view-3d" style="background:transparent;color:var(--text-2);padding:4px 10px;border-radius:6px;border:none;cursor:pointer"><i class="fa fa-cube"></i> 3D View</button>
+            </div>
+            <select class="form-control" id="map-select" style="width:220px">
+              <option value="fuel_map">Fuel Map (16x16)</option>
+              <option value="ignition_map">Ignition Map (16x16)</option>
+              <option value="ve_map">VE Map (12x12)</option>
+              <option value="afr_target_map">AFR Target Map (12x12)</option>
+              <option value="idle_map">Idle Speed Map (8x8)</option>
+              <option value="fuel_trim_map">Fuel Trim Map (8x8)</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="btn-load-map"><i class="fa fa-download"></i> Load</button>
+            <button class="btn btn-success btn-sm" id="btn-save-map"><i class="fa fa-floppy-disk"></i> Save</button>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;gap:24px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:10px;color:var(--text-3);text-transform:uppercase;margin-bottom:3px">Map</div>
+              <div id="map-name-label" style="font-weight:600;font-size:13px">—</div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--text-3);text-transform:uppercase;margin-bottom:3px">Description
+              </div>
+              <div id="map-desc-label" style="font-size:13px;color:var(--text-2)">—</div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--text-3);text-transform:uppercase;margin-bottom:3px">Unit</div>
+              <div id="map-unit-label" style="font-weight:600;font-size:13px">—</div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--text-3);text-transform:uppercase;margin-bottom:3px">Size</div>
+              <div id="map-size-label" style="font-size:13px;color:var(--text-2)">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="map-table-card" style="padding:14px;overflow:auto">
+          <div id="map-table-wrapper">
+            <div style="color:var(--text-3);font-size:13px;padding:20px;text-align:center">Klik Load untuk memuat map
+            </div>
+          </div>
+        </div>
+        <div class="card" id="map-3d-card" style="padding:14px;display:none;overflow:hidden">
+          <div id="map-3d-wrapper" style="width:100%;height:500px;min-height:500px">
+            <div style="color:var(--text-3);font-size:13px;padding:20px;text-align:center">Klik Load untuk memuat map dalam visualisasi 3D</div>
+          </div>
+        </div>
+      </div>
+      <div class="page-section" id="page-flash">
+        <div class="section-title"><i class="fa fa-microchip"></i> Flash ECU</div>
+        <div class="grid grid-2" style="margin-bottom:18px">
+          <div class="card">
+            <div class="card-title"><i class="fa fa-book-open"></i> Read Operations</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+              <button class="btn btn-secondary" id="btn-read-full"><i class="fa fa-download"></i> Read Full Flash
+                (64KB)</button>
+              <button class="btn btn-secondary" id="btn-read-eeprom"><i class="fa fa-database"></i> Read EEPROM
+                (1KB)</button>
+              <button class="btn btn-secondary" id="btn-read-cal"><i class="fa fa-sliders"></i> Read
+                Calibration</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa fa-pen-to-square"></i> Write Operations</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+              <button class="btn btn-danger" id="btn-write-cal"><i class="fa fa-upload"></i> Write Calibration</button>
+              <button class="btn btn-danger" id="btn-write-full"><i class="fa fa-fire"></i> Write Full Flash</button>
+              <button class="btn btn-secondary" id="btn-verify"><i class="fa fa-check-double"></i> Verify Flash</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fa fa-spinner fa-spin" id="flash-spinner"></i> Flash Progress</div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span
+              id="flash-state-label">Idle</span><span id="flash-pct-label"
+              style="font-weight:700;color:var(--red)">0%</span></div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="flash-bar" style="width:0%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-top:8px">
+            <span id="flash-bytes-label">0 / 0 bytes</span><span id="flash-eta-label">ETA: —</span><span
+              id="flash-speed-label">— B/s</span>
+          </div>
+          <div id="flash-msg" style="margin-top:10px;font-size:12px;color:var(--text-2);font-family:monospace">Ready
+          </div>
+        </div>
+      </div>
+      <div class="page-section" id="page-backup">
+        <div class="section-title"><i class="fa fa-floppy-disk"></i> Backup</div>
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-title"><i class="fa fa-database"></i> Create Backup</div>
+            <p style="font-size:13px;color:var(--text-2);margin-bottom:14px">Baca EEPROM ECU dan simpan ke LittleFS
+              sebagai file .bin.</p>
+            <div class="form-group"><label class="form-label">Filename (opsional)</label><input type="text"
+                class="form-control" id="backup-filename" placeholder="eeprom_backup (auto-generated)"></div>
+            <button class="btn btn-primary" id="btn-backup"><i class="fa fa-download"></i> Start Backup</button>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa fa-rotate-left"></i> Restore Simulation</div>
+            <p style="font-size:13px;color:var(--text-2);margin-bottom:14px">Bandingkan file backup dengan ECU tanpa
+              menulis (safe mode).</p>
+            <div class="form-group"><label class="form-label">Select Backup File</label><select class="form-control"
+                id="restore-file">
+                <option value="">- pilih file -</option>
+              </select></div>
+            <button class="btn btn-secondary" id="btn-restore"><i class="fa fa-search"></i> Simulate Restore</button>
+          </div>
+        </div>
+      </div>
+      <div class="page-section" id="page-files">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div class="section-title" style="margin:0"><i class="fa fa-folder-open"></i> File Manager</div>
+          <button class="btn btn-secondary btn-sm" id="btn-refresh-files"><i class="fa fa-rotate"></i> Refresh</button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div
+            style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg-2)">
+            <i class="fa fa-folder" style="color:var(--yellow)"></i><span
+              style="font-size:13px;font-family:monospace">/backup</span>
+          </div>
+          <div id="file-list"></div>
+        </div>
+      </div>
+      <div class="page-section" id="page-terminal">
+        <div class="section-title"><i class="fa fa-terminal"></i> K-Line Terminal</div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span style="font-size:12px;color:var(--text-2)">Send raw HEX commands to K-Line bus</span>
+            <button class="btn btn-secondary btn-sm" id="btn-clear-term"><i class="fa fa-broom"></i> Clear</button>
+          </div>
+          <div class="terminal-output" id="terminal-output"><span style="color:#4ade80">$ Honda ECU Tool — K-Line
+              Terminal</span>
+            <span style="color:var(--text-3)">Connected @ 10400 baud | Type HEX and press Send</span>
+          </div>
+          <div class="terminal-input-row">
+            <span style="color:var(--text-3);align-self:center;font-family:monospace;font-size:13px">TX &gt;</span>
+            <input type="text" class="terminal-input" id="terminal-input" placeholder="82 10 F0 21 01 xx"
+              spellcheck="false">
+            <button class="btn btn-primary" id="btn-send-kline"><i class="fa fa-paper-plane"></i> Send</button>
+          </div>
+          <div style="margin-top:10px">
+            <p style="font-size:11px;color:var(--text-3);margin-bottom:6px">Quick commands:</p>
+            <div style="display:flex;gap:6px;flex-wrap:wrap" id="quick-cmds">
+              <button class="btn btn-secondary btn-sm" data-hex="82 10 F0 81 03">Init Session</button>
+              <button class="btn btn-secondary btn-sm" data-hex="02 21 01">Read ID</button>
+              <button class="btn btn-secondary btn-sm" data-hex="02 21 80">Read DTC</button>
+              <button class="btn btn-secondary btn-sm" data-hex="04 14 FF 00">Clear DTC</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="page-section" id="page-logger">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div class="section-title" style="margin:0"><i class="fa fa-file-lines"></i> Session Logs</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" id="btn-refresh-log"><i class="fa fa-rotate"></i> Refresh</button>
+            <button class="btn btn-secondary btn-sm" id="btn-export-log"><i class="fa fa-file-csv"></i> Export
+              CSV</button>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div
+            style="display:flex;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg-2)">
+            <span class="chip chip-green"><i class="fa fa-circle"></i> INF</span>
+            <span class="chip chip-yellow"><i class="fa fa-circle"></i> WRN</span>
+            <span class="chip chip-red"><i class="fa fa-circle"></i> ERR</span>
+          </div>
+          <div style="max-height:480px;overflow-y:auto" id="log-list"></div>
+        </div>
+      </div>
+      <div class="page-section" id="page-settings">
+        <div class="section-title"><i class="fa fa-gear"></i> Settings</div>
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-title"><i class="fa fa-wifi"></i> WiFi &amp; Network</div>
+            <div class="form-group"><label class="form-label">SSID</label><input type="text" class="form-control"
+                id="set-ssid"></div>
+            <div class="form-group"><label class="form-label">Password</label><input type="password"
+                class="form-control" id="set-pass"></div>
+            <div class="form-group"><label class="form-label">mDNS Hostname</label><input type="text"
+                class="form-control" id="set-mdns"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa fa-sliders"></i> ECU Protocol</div>
+            <div class="form-group"><label class="form-label">Baudrate</label><select class="form-control"
+                id="set-baud">
+                <option value="10400">10400 bps (K-Line)</option>
+                <option value="4800">4800 bps</option>
+                <option value="9600">9600 bps</option>
+              </select></div>
+            <div class="form-group"><label class="form-label">Init Mode</label><select class="form-control"
+                id="set-init">
+                <option value="fast">Fast Init (KWP2000)</option>
+                <option value="5baud">5-Baud Init</option>
+                <option value="auto">Auto Detect</option>
+              </select></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa fa-lock"></i> Authentication</div>
+            <div class="form-group"><label class="form-label">Username</label><input type="text" class="form-control"
+                id="set-user"></div>
+            <div class="form-group"><label class="form-label">Password</label><input type="password"
+                class="form-control" id="set-auth-pass" placeholder="Leave blank to keep current"></div>
+            <div class="form-group"><label class="form-label">Session Timeout (min)</label><input type="number"
+                class="form-control" id="set-timeout" min="5" max="120"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa fa-power-off"></i> System</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+              <button class="btn btn-secondary" id="btn-save-settings"><i class="fa fa-floppy-disk"></i> Save
+                Settings</button>
+              <button class="btn btn-danger" id="btn-reboot"><i class="fa fa-rotate-right"></i> Reboot ESP32</button>
+              <button class="btn btn-secondary" id="btn-ota-open"><i class="fa fa-upload"></i> OTA Firmware
+                Update</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="page-section" id="page-about">
+        <div class="section-title"><i class="fa fa-circle-info"></i> About</div>
+        <div class="card" style="max-width:600px">
+          <div style="text-align:center;margin-bottom:24px">
+            <div style="font-size:48px;margin-bottom:10px">🏍️</div>
+            <div style="font-size:22px;font-weight:700">Honda ECU K-Line Tool</div>
+            <div style="color:var(--text-2);font-size:13px;margin-top:6px">ESP32 Diagnostic &amp; Tuning System</div>
+            <div style="margin-top:10px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap">
+              <span class="chip chip-red">v1.0.0</span><span class="chip chip-blue">ESP32</span><span
+                class="chip chip-green">K-Line ISO 9141</span><span class="chip chip-yellow">KWP2000</span>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:18px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+              <div><span style="color:var(--text-3)">Platform:</span> ESP32 DOIT V1</div>
+              <div><span style="color:var(--text-3)">Framework:</span> Arduino + AsyncWebServer</div>
+              <div><span style="color:var(--text-3)">Protocol:</span> K-Line @ 10400 bps</div>
+              <div><span style="color:var(--text-3)">Storage:</span> LittleFS 1MB</div>
+              <div><span style="color:var(--text-3)">Interface:</span> REST API + WebSocket</div>
+              <div><span style="color:var(--text-3)">License:</span> MIT</div>
+            </div>
+          </div>
+          <div
+            style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;font-size:12px;color:var(--text-3);text-align:center">
+            Dibuat dengan ❤️ untuk komunitas otomotif Indonesia<br>
+            <span style="color:var(--text-2)">⚠️ Demo Mode — Data dari JSON mock files, tidak terhubung ke ESP32</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const MOCK = './mock/';
+    const MM = { '/api/status': 'api_status.json', '/api/info': 'api_info.json', '/api/live': 'api_live.json', '/api/dtc': 'api_dtc.json', '/api/log': 'api_log.json', '/api/files': 'api_files.json', '/api/settings': 'api_settings.json', '/api/maps': 'api_maps.json', '/api/map/fuel_map': 'api_map_fuel.json', '/api/map/ignition_map': 'api_map_ignition.json', '/api/map/ve_map': 'api_map_ve.json', '/api/map/afr_target_map': 'api_map_afr.json', '/api/map/idle_map': 'api_map_idle.json', '/api/map/fuel_trim_map': 'api_map_fuel_trim.json' };
+    async function mf(ep) { try { const r = await fetch(MOCK + MM[ep]); return await r.json(); } catch { return null; } }
+    function fUp(ms) { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sc = s % 60; return h > 0 ? h + 'h ' + m + 'm' : m > 0 ? m + 'm ' + sc + 's' : sc + 's'; }
+    function fBy(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : b >= 1024 ? (b / 1024).toFixed(1) + ' KB' : b + ' B'; }
+    function fDt(ts) { return new Date(ts * 1000).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); }
+    function toast(msg, type = 'info', dur = 3000) { const icons = { info: 'fa-info-circle', success: 'fa-check-circle', error: 'fa-circle-xmark' }; const el = document.createElement('div'); el.className = 'toast ' + type; el.innerHTML = '<i class="fa ' + icons[type] + '"></i><span>' + msg + '</span>'; document.getElementById('toast-container').appendChild(el); setTimeout(() => { el.style.animation = 'tin .3s ease reverse'; setTimeout(() => el.remove(), 300); }, dur); }
+    const PN = { dashboard: 'Dashboard', vehicle: 'Vehicle', live: 'Live Data', diagnostic: 'Diagnostic', mapeditor: 'Map Editor', flash: 'Flash ECU', backup: 'Backup', files: 'File Manager', terminal: 'Terminal', logger: 'Logs', settings: 'Settings', about: 'About' };
+    function navTo(page) { document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); const s = document.getElementById('page-' + page); if (s) s.classList.add('active'); const n = document.querySelector('.nav-item[data-page="' + page + '"]'); if (n) n.classList.add('active'); document.getElementById('topbar-title').textContent = PN[page] || page; const a = { dashboard: loadDashboard, live: loadLive, diagnostic: loadDTC, logger: loadLogs, files: loadFiles, settings: loadSettings, backup: loadBackupFiles, vehicle: renderVehicles }; if (a[page]) a[page](); }
+    document.querySelectorAll('.nav-item[data-page]').forEach(n => n.addEventListener('click', () => { navTo(n.dataset.page); document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('show'); }));
+    document.getElementById('menu-toggle').addEventListener('click', () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebar-overlay').classList.toggle('show'); });
+    document.getElementById('sidebar-overlay').addEventListener('click', () => { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('show'); });
+    let isDark = true;
+    document.getElementById('btn-theme').addEventListener('click', () => { isDark = !isDark; document.documentElement.setAttribute('data-theme', isDark ? '' : 'light'); document.getElementById('btn-theme').innerHTML = isDark ? '<i class="fa fa-moon"></i>' : '<i class="fa fa-sun"></i>'; });
+    async function loadDashboard() { const [st, info, dtc, live] = await Promise.all([mf('/api/status'), mf('/api/info'), mf('/api/dtc'), mf('/api/live')]); if (st) { document.getElementById('dash-uptime').textContent = fUp(st.uptime); document.getElementById('dash-vbat').innerHTML = st.battVoltage.toFixed(2) + ' <span class="metric-unit">V</span>'; document.getElementById('dash-heap').textContent = fBy(st.freeHeap); document.getElementById('dash-temp').innerHTML = st.cpuTemp.toFixed(1) + ' <span class="metric-unit">°C</span>'; const p = Math.round(st.fsUsed / st.fsTotal * 100); document.getElementById('fs-pct').textContent = p + '%'; document.getElementById('fs-bar').style.width = p + '%'; document.getElementById('fs-detail').textContent = fBy(st.fsUsed) + ' / ' + fBy(st.fsTotal) + ' used'; document.getElementById('ecu-dot').className = 'status-dot' + (st.ecuConnected ? '' : ' offline'); document.getElementById('ecu-status-text').textContent = st.ecuConnected ? 'ECU Connected' : 'ECU Disconnected'; } if (info) { document.getElementById('info-pn').textContent = info.partNumber; document.getElementById('info-fw').innerHTML = '<span class="chip chip-green">v' + info.firmwareVersion + '</span>'; document.getElementById('info-hw').textContent = 'Rev ' + info.hardwareVersion; document.getElementById('info-proto').textContent = info.protocol; document.getElementById('info-eeprom').textContent = fBy(info.eepromSize); document.getElementById('info-flash').textContent = fBy(info.flashSize); document.getElementById('info-vin').textContent = info.vin; } if (dtc) { document.getElementById('dash-dtc-count').textContent = dtc.count; document.getElementById('dtc-count-badge').textContent = dtc.count; document.getElementById('dash-mil-status').innerHTML = dtc.milOn ? '<span style="color:var(--red)">⚠️ MIL ON</span>' : '<span style="color:var(--green)">✅ MIL OFF</span>'; } if (live) { const ss = [{ n: 'RPM', v: live.rpm, u: 'rpm', m: 8000 }, { n: 'TPS', v: live.tps.toFixed(1), u: '%', m: 100 }, { n: 'ECT', v: live.ect.toFixed(1), u: '°C', m: 120 }, { n: 'IAT', v: live.iat.toFixed(1), u: '°C', m: 80 }]; document.getElementById('mini-sensors').innerHTML = ss.map(s => '<div class="sensor-card"><div class="sensor-name">' + s.n + '</div><div class="sensor-value">' + s.v + '<span class="sensor-unit">' + s.u + '</span></div><div class="sensor-bar"><div class="sensor-bar-fill" style="width:' + Math.min(100, parseFloat(s.v) / s.m * 100) + '%"></div></div></div>').join(''); } }
+    const VH = [{ name: 'Honda Beat', sub: 'FI / eSP', icon: '🛵', model: 0 }, { name: 'Honda Scoopy', sub: 'FI', icon: '🛵', model: 1 }, { name: 'Honda Genio', sub: 'FI', icon: '🛵', model: 2 }, { name: 'Honda Vario', sub: '110/125/150/160', icon: '🏍️', model: 3 }, { name: 'Honda PCX', sub: '150/160', icon: '🏍️', model: 4 }, { name: 'Honda ADV', sub: '150/160', icon: '🏍️', model: 5 }, { name: 'Honda Supra', sub: 'GTR / X', icon: '🏍️', model: 6 }, { name: 'Honda Sonic', sub: '150R', icon: '🏍️', model: 7 }, { name: 'Honda CB150R', sub: 'Streetfire', icon: '🏍️', model: 9 }, { name: 'Honda CBR150R', sub: 'K45/2022', icon: '🏍️', model: 10 }, { name: 'Honda CRF150L', sub: 'Off-road', icon: '🏍️', model: 11 }, { name: 'Honda Stylo', sub: '160', icon: '🛵', model: 12 }];
+    let selVeh = 3;
+    function renderVehicles() { const g = document.getElementById('vehicle-grid'); g.innerHTML = VH.map(v => '<div class="vehicle-card' + (v.model === selVeh ? ' selected' : '') + '" data-model="' + v.model + '"><div class="vehicle-icon">' + v.icon + '</div><div class="vehicle-name">' + v.name + '</div><div class="vehicle-sub">' + v.sub + '</div></div>').join(''); g.querySelectorAll('.vehicle-card').forEach(c => c.addEventListener('click', () => { selVeh = parseInt(c.dataset.model); renderVehicles(); toast('Model: ' + VH.find(v => v.model === selVeh)?.name, 'success'); })); }
+    let rpmChart = null;
+    async function loadLive() { const d = await mf('/api/live'); if (!d) return; const ss = [{ n: 'RPM', v: d.rpm, u: 'rpm', m: 8000, dec: 0 }, { n: 'TPS', v: d.tps, u: '%', m: 100, dec: 1 }, { n: 'MAP', v: d.map, u: 'kPa', m: 120, dec: 1 }, { n: 'IAT', v: d.iat, u: '°C', m: 80, dec: 1 }, { n: 'ECT', v: d.ect, u: '°C', m: 120, dec: 1 }, { n: 'Battery', v: d.battVoltage, u: 'V', m: 16, dec: 2 }, { n: 'Inj PW', v: d.injPulseWidth, u: 'ms', m: 10, dec: 3 }, { n: 'Ign Timing', v: d.ignTiming, u: '°BTDC', m: 45, dec: 1 }, { n: 'Speed', v: d.vehicleSpeed, u: 'km/h', m: 160, dec: 0 }, { n: 'Eng Load', v: d.engineLoad, u: '%', m: 100, dec: 1 }, { n: 'O2 Sensor', v: d.o2Sensor, u: 'mV', m: 1000, dec: 0 }, { n: 'Fuel Trim', v: d.fuelTrim, u: '%', m: 25, dec: 1 }]; document.getElementById('sensor-grid').innerHTML = ss.map(s => { const val = parseFloat(s.v).toFixed(s.dec), p = Math.min(100, Math.abs(parseFloat(s.v)) / s.m * 100); return '<div class="sensor-card"><div class="sensor-name">' + s.n + '</div><div class="sensor-value">' + val + '<span class="sensor-unit">' + s.u + '</span></div><div class="sensor-bar"><div class="sensor-bar-fill" style="width:' + p + '%"></div></div></div>'; }).join(''); document.getElementById('live-loop-status').innerHTML = '<i class="fa fa-circle"></i> ' + (d.closedLoop ? 'Closed Loop' : 'Open Loop'); const hist = Array(30).fill(0).map(() => Math.max(600, d.rpm + Math.round((Math.random() - .5) * 300))); if (rpmChart) rpmChart.destroy(); rpmChart = new Chart(document.getElementById('rpm-chart').getContext('2d'), { type: 'line', data: { labels: hist.map(() => ''), datasets: [{ label: 'RPM', data: hist, borderColor: '#e8343a', backgroundColor: 'rgba(232,52,58,0.1)', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0 }] }, options: { responsive: true, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { min: 0, max: 8000, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a5e78', font: { size: 10 } } } } } }); }
+    document.getElementById('btn-refresh-live').addEventListener('click', () => { loadLive(); toast('Refreshed', 'success'); });
+    async function loadDTC() { const d = await mf('/api/dtc'); if (!d) return; document.getElementById('dtc-total').textContent = d.count; document.getElementById('dtc-count-badge').textContent = d.count; document.getElementById('dtc-mil-text').innerHTML = 'MIL Lamp: ' + (d.milOn ? '<span style="color:var(--red)">ON ⚠️</span>' : '<span style="color:var(--green)">OFF ✅</span>'); document.getElementById('dtc-body').innerHTML = d.dtcs.map(x => '<tr><td><span class="dtc-code">' + x.code + '</span></td><td style="font-size:13px;color:var(--text-2)">' + x.description + '</td><td><span class="dtc-pill ' + (x.pending ? 'pending' : 'active') + '">' + (x.pending ? '🔶 Pending' : '🔴 Active') + '</span></td><td><span class="dtc-pill ' + (x.milOn ? 'active' : 'ok') + '">' + (x.milOn ? 'ON' : 'OFF') + '</span></td></tr>').join(''); }
+    document.getElementById('btn-read-dtc').addEventListener('click', () => { toast('Scanning...', 'info'); setTimeout(() => { loadDTC(); toast('DTC scan complete', 'success'); }, 1200); });
+    document.getElementById('btn-clear-dtc').addEventListener('click', () => { if (!confirm('Clear DTC?')) return; document.getElementById('dtc-body').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-3)">No fault codes</td></tr>'; document.getElementById('dtc-total').textContent = '0'; document.getElementById('dtc-count-badge').textContent = '0'; toast('DTC cleared (demo)', 'success'); });
+    let currentMapData = null;
+    function render3DMap(d) {
+      const container = document.getElementById('map-3d-wrapper');
+      container.innerHTML = '';
+      const zData = d.data;
+      const xData = d.xAxis.values;
+      const yData = d.yAxis.values;
+      const trace = {
+        z: zData,
+        x: xData,
+        y: yData,
+        type: 'surface',
+        colorscale: 'Viridis',
+        colorbar: {
+          title: d.units,
+          titleside: 'top',
+          tickcolor: '#8b8fa8',
+          tickfont: { color: '#8b8fa8', size: 10 }
+        }
+      };
+      const layout = {
+        title: {
+          text: d.description,
+          font: { color: '#e2e4ef', size: 14 }
+        },
+        autosize: true,
+        margin: { l: 10, r: 10, b: 10, t: 40 },
+        scene: {
+          xaxis: {
+            title: d.xAxis.name + ' (' + d.xAxis.units + ')',
+            titlefont: { color: '#e2e4ef', size: 11 },
+            tickcolor: '#8b8fa8',
+            tickfont: { color: '#8b8fa8', size: 9 },
+            gridcolor: 'rgba(255,255,255,0.08)'
+          },
+          yaxis: {
+            title: d.yAxis.name + ' (' + d.yAxis.units + ')',
+            titlefont: { color: '#e2e4ef', size: 11 },
+            tickcolor: '#8b8fa8',
+            tickfont: { color: '#8b8fa8', size: 9 },
+            gridcolor: 'rgba(255,255,255,0.08)'
+          },
+          zaxis: {
+            title: d.units,
+            titlefont: { color: '#e2e4ef', size: 11 },
+            tickcolor: '#8b8fa8',
+            tickfont: { color: '#8b8fa8', size: 9 },
+            gridcolor: 'rgba(255,255,255,0.08)'
+          },
+          camera: {
+            eye: { x: 1.5, y: 1.5, z: 1.2 }
+          }
+        },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)'
+      };
+      Plotly.newPlot(container, [trace], layout, { responsive: true, displayModeBar: false });
+    }
+    async function loadMap() {
+      const nm = document.getElementById('map-select').value;
+      const d = await mf('/api/map/' + nm);
+      if (!d) { toast('Failed', 'error'); return; }
+      currentMapData = d;
+      document.getElementById('map-name-label').textContent = d.name;
+      document.getElementById('map-desc-label').textContent = d.description;
+      document.getElementById('map-unit-label').textContent = d.units;
+      document.getElementById('map-size-label').textContent = d.data.length + '×' + d.data[0].length;
+      const mn = Math.min(...d.data.flat()), mx = Math.max(...d.data.flat());
+      function hc(v) { const t = (v - mn) / (mx - mn); if (t < .25) { return 'rgb(0,' + Math.round(100 + 155 * t / .25) + ',200)'; } if (t < .5) { return 'rgb(' + Math.round(50 * (t - .25) / .25) + ',255,' + Math.round(200 - 200 * (t - .25) / .25) + ')'; } if (t < .75) { return 'rgb(' + Math.round(50 + 200 * (t - .5) / .25) + ',' + Math.round(255 - 55 * (t - .5) / .25) + ',0)'; } return 'rgb(250,' + Math.round(200 - 150 * (t - .75) / .25) + ',0)'; }
+      let h = '<table class="map-table"><thead><tr><th style="background:var(--bg-2)">' + d.yAxis.name + '/' + d.xAxis.name + '</th>' + d.xAxis.values.map(v => '<th>' + v + '</th>').join('') + '</tr></thead><tbody>';
+      d.data.forEach((row, ri) => {
+        h += '<tr><th style="background:var(--bg-2);font-size:10px">' + d.yAxis.values[ri] + '</th>';
+        row.forEach(c => { const bg = hc(c), tc = (c - mn) / (mx - mn) > .6 ? '#fff' : '#000'; h += '<td><input type="number" class="map-cell" value="' + (Number.isInteger(c) ? c : c.toFixed(2)) + '" step="0.01" style="background:' + bg + ';color:' + tc + '"></td>'; });
+        h += '</tr>';
+      });
+      h += '</tbody></table>';
+      document.getElementById('map-table-wrapper').innerHTML = h;
+      if (document.getElementById('map-3d-card').style.display === 'block') {
+        render3DMap(d);
+      } else {
+        document.getElementById('map-3d-wrapper').innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:20px;text-align:center">Visualisasi 3D siap dimuat. Alihkan ke 3D View untuk merender.</div>';
+      }
+      toast('Map "' + d.name + '" loaded', 'success');
+    }
+    document.getElementById('btn-map-view-table').addEventListener('click', () => {
+      document.getElementById('map-3d-card').style.display = 'none';
+      document.getElementById('map-table-card').style.display = 'block';
+      document.getElementById('btn-map-view-3d').style.background = 'transparent';
+      document.getElementById('btn-map-view-3d').style.color = 'var(--text-2)';
+      document.getElementById('btn-map-view-table').style.background = 'var(--red)';
+      document.getElementById('btn-map-view-table').style.color = '#fff';
+    });
+    document.getElementById('btn-map-view-3d').addEventListener('click', () => {
+      document.getElementById('map-table-card').style.display = 'none';
+      document.getElementById('map-3d-card').style.display = 'block';
+      document.getElementById('btn-map-view-table').style.background = 'transparent';
+      document.getElementById('btn-map-view-table').style.color = 'var(--text-2)';
+      document.getElementById('btn-map-view-3d').style.background = 'var(--red)';
+      document.getElementById('btn-map-view-3d').style.color = '#fff';
+      if (currentMapData) {
+        render3DMap(currentMapData);
+        setTimeout(() => { Plotly.Plots.resize(document.getElementById('map-3d-wrapper')); }, 50);
+      }
+    });
+    document.getElementById('btn-load-map').addEventListener('click', loadMap);
+    document.getElementById('btn-save-map').addEventListener('click', () => toast('Map saved (demo)', 'success'));
+    function simFlash(op) { let pct = 0; const ON = { read_full: 'Reading Full Flash', read_eeprom: 'Reading EEPROM', read_cal: 'Reading Calibration', write_cal: 'Writing Calibration', write_full: 'Writing Full Flash', verify: 'Verifying Flash' }; const OT = { read_full: 65536, read_eeprom: 1024, read_cal: 8192, write_cal: 8192, write_full: 65536, verify: 65536 }; document.getElementById('flash-state-label').textContent = ON[op] || op; document.getElementById('flash-bar').classList.add('animate'); document.getElementById('flash-spinner').className = 'fa fa-spinner fa-spin'; const total = OT[op] || 65536; const iv = setInterval(() => { pct += Math.random() * 8 + 2; if (pct >= 100) { pct = 100; clearInterval(iv); document.getElementById('flash-state-label').textContent = 'Complete ✅'; document.getElementById('flash-bar').classList.remove('animate'); document.getElementById('flash-spinner').className = 'fa fa-check'; document.getElementById('flash-eta-label').textContent = 'Done'; document.getElementById('flash-msg').textContent = 'Operation completed successfully.'; toast('Flash complete', 'success'); return; } const done = Math.round(pct / 100 * total); document.getElementById('flash-pct-label').textContent = Math.round(pct) + '%'; document.getElementById('flash-bar').style.width = pct + '%'; document.getElementById('flash-bytes-label').textContent = fBy(done) + ' / ' + fBy(total); document.getElementById('flash-speed-label').textContent = Math.round(Math.random() * 200 + 800) + ' B/s'; document.getElementById('flash-eta-label').textContent = 'ETA: ' + Math.round((100 - pct) / 8) + 's'; document.getElementById('flash-msg').textContent = 'Block ' + Math.round(done / 256) + ' of ' + Math.round(total / 256); }, 150); }
+    [['btn-read-full', 'read_full'], ['btn-read-eeprom', 'read_eeprom'], ['btn-read-cal', 'read_cal'], ['btn-write-cal', 'write_cal'], ['btn-write-full', 'write_full'], ['btn-verify', 'verify']].forEach(([id, op]) => document.getElementById(id)?.addEventListener('click', () => simFlash(op)));
+    async function loadBackupFiles() { const d = await mf('/api/files'); if (!d) return; const s = document.getElementById('restore-file'); s.innerHTML = '<option value="">- pilih file -</option>'; d.files.forEach(f => { const o = document.createElement('option'); o.value = f.name; o.textContent = f.name; s.appendChild(o); }); }
+    document.getElementById('btn-backup').addEventListener('click', () => { toast('Backup started...', 'info'); setTimeout(() => toast('Saved: eeprom_demo.bin', 'success'), 1500); });
+    document.getElementById('btn-restore').addEventListener('click', () => { const f = document.getElementById('restore-file').value; if (!f) { toast('Pilih file!', 'error'); return; } toast('Simulating: ' + f, 'info'); setTimeout(() => toast('OK — 0 differences', 'success'), 2000); });
+    async function loadFiles() { const d = await mf('/api/files'); if (!d) return; document.getElementById('file-list').innerHTML = d.files.length ? d.files.map(f => '<div class="file-item"><i class="fa fa-file file-icon"></i><span class="file-name">' + f.name + '</span><span class="file-size">' + fBy(f.size) + '</span><span class="file-date">' + fDt(f.modified) + '</span><button class="btn btn-secondary btn-sm btn-icon"><i class="fa fa-download"></i></button><button class="btn btn-danger btn-sm btn-icon"><i class="fa fa-trash"></i></button></div>').join('') : '<div style="padding:24px;text-align:center;color:var(--text-3)">No files</div>'; }
+    document.getElementById('btn-refresh-files').addEventListener('click', () => { loadFiles(); toast('Refreshed', 'info'); });
+    const tOut = document.getElementById('terminal-output');
+    function tPrint(l, c = '#e2e4ef') { tOut.innerHTML += '\n<span style="color:' + c + '">' + l + '</span>'; tOut.scrollTop = tOut.scrollHeight; }
+    function sendKL(hex) { tPrint('TX > ' + hex, '#facc15'); setTimeout(() => tPrint('RX < ' + Array.from({ length: 6 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase()).join(' '), '#7fe7c4'), 300); }
+    document.getElementById('btn-send-kline').addEventListener('click', () => { const v = document.getElementById('terminal-input').value.trim(); if (!v) return; sendKL(v); document.getElementById('terminal-input').value = ''; });
+    document.getElementById('terminal-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-send-kline').click(); });
+    document.getElementById('btn-clear-term').addEventListener('click', () => { tOut.innerHTML = '<span style="color:#4ade80">$ Terminal cleared</span>'; });
+    document.querySelectorAll('#quick-cmds .btn').forEach(b => b.addEventListener('click', () => sendKL(b.dataset.hex)));
+    async function loadLogs() { const d = await mf('/api/log'); if (!d) return; document.getElementById('log-list').innerHTML = d.logs.map(l => '<div class="log-entry"><span class="log-ts">' + fUp(l.ts) + '</span><span class="log-level ' + l.level + '">' + l.level + '</span><span class="log-tag">[' + l.tag + ']</span><span class="log-msg">' + l.msg + '</span></div>').join(''); }
+    document.getElementById('btn-refresh-log').addEventListener('click', () => { loadLogs(); toast('Refreshed', 'info'); });
+    document.getElementById('btn-export-log').addEventListener('click', () => toast('Exporting CSV (demo)', 'info'));
+    async function loadSettings() { const d = await mf('/api/settings'); if (!d) return; document.getElementById('set-ssid').value = d.ssid; document.getElementById('set-pass').value = d.password; document.getElementById('set-mdns').value = d.mdns; document.getElementById('set-user').value = d.authUsername; document.getElementById('set-timeout').value = d.sessionTimeout; document.getElementById('set-baud').value = d.baudrate; document.getElementById('set-init').value = d.initMode; }
+    document.getElementById('btn-save-settings').addEventListener('click', () => toast('Settings saved (demo)', 'success'));
+    document.getElementById('btn-reboot').addEventListener('click', () => { if (confirm('Reboot ESP32?')) toast('Rebooting... (demo)', 'info'); });
+    document.getElementById('btn-ota-open').addEventListener('click', () => toast('OTA — upload firmware .bin', 'info'));
+    loadDashboard();
+  </script>
+</body>
+
+</html>

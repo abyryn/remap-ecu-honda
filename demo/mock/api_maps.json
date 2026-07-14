@@ -1,0 +1,94 @@
+{
+  "maps": [
+    {
+      "name": "fuel_map",
+      "description": "Fuel Injection Base Pulse Width",
+      "rows": 16,
+      "cols": 16,
+      "units": "ms",
+      "xAxis": {
+        "name": "RPM",
+        "units": "rpm"
+      },
+      "yAxis": {
+        "name": "TPS",
+        "units": "%"
+      }
+    },
+    {
+      "name": "ignition_map",
+      "description": "Ignition Timing Advance",
+      "rows": 16,
+      "cols": 16,
+      "units": "°BTDC",
+      "xAxis": {
+        "name": "RPM",
+        "units": "rpm"
+      },
+      "yAxis": {
+        "name": "MAP",
+        "units": "kPa"
+      }
+    },
+    {
+      "name": "ve_map",
+      "description": "Volumetric Efficiency Map",
+      "rows": 12,
+      "cols": 12,
+      "units": "%",
+      "xAxis": {
+        "name": "RPM",
+        "units": "rpm"
+      },
+      "yAxis": {
+        "name": "MAP",
+        "units": "kPa"
+      }
+    },
+    {
+      "name": "afr_target_map",
+      "description": "Air-Fuel Ratio Target (Lambda)",
+      "rows": 12,
+      "cols": 12,
+      "units": "λ",
+      "xAxis": {
+        "name": "RPM",
+        "units": "rpm"
+      },
+      "yAxis": {
+        "name": "TPS",
+        "units": "%"
+      }
+    },
+    {
+      "name": "idle_map",
+      "description": "Idle Air Control Stepper Motor",
+      "rows": 8,
+      "cols": 8,
+      "units": "steps",
+      "xAxis": {
+        "name": "ECT",
+        "units": "°C"
+      },
+      "yAxis": {
+        "name": "IAT",
+        "units": "°C"
+      }
+    },
+    {
+      "name": "fuel_trim_map",
+      "description": "Closed Loop Fuel Trim Limit",
+      "rows": 8,
+      "cols": 8,
+      "units": "%",
+      "xAxis": {
+        "name": "RPM",
+        "units": "rpm"
+      },
+      "yAxis": {
+        "name": "Load",
+        "units": "%"
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "logs": [
+    { "ts": 45230000, "level": "INF", "tag": "ECU", "msg": "Session started OK" },
+    { "ts": 45230120, "level": "INF", "tag": "ECU", "msg": "ID: 37820-K93-N01 FW: 1.7" },
+    { "ts": 45230240, "level": "INF", "tag": "LIVE", "msg": "Live data polling started @ 10Hz" },
+    { "ts": 45230500, "level": "WRN", "tag": "ECU", "msg": "O2 sensor voltage low: 180mV" },
+    { "ts": 45230780, "level": "INF", "tag": "DTC", "msg": "Read 3 fault codes" },
+    { "ts": 45231000, "level": "ERR", "tag": "KLin", "msg": "CRC mismatch on PID 0x0C, retry 1/3" },
+    { "ts": 45231120, "level": "INF", "tag": "KLin", "msg": "PID 0x0C OK after retry" },
+    { "ts": 45231200, "level": "INF", "tag": "API", "msg": "GET /api/live 200 OK" },
+    { "ts": 45231340, "level": "INF", "tag": "WS", "msg": "Client connected from 192.168.4.2" },
+    { "ts": 45231500, "level": "INF", "tag": "API", "msg": "GET /api/status 200 OK" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "manufacturer": "Honda Motor Co., Ltd.",
+  "partNumber": "37820-K93-N01",
+  "firmwareVersion": "1.7",
+  "hardwareVersion": "2.1",
+  "protocol": "KWP2000 Fast Init",
+  "eepromSize": 1024,
+  "flashSize": 65536,
+  "vin": "MH1JF3420NK123456",
+  "calibrationId": "37820-K93-N01-REV1",
+  "checksum": 183
+}

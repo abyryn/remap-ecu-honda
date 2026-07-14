@@ -1,0 +1,11 @@
+{
+  "ssid": "Honda ECU Tool",
+  "password": "12345678",
+  "ip": "192.168.4.1",
+  "baudrate": 10400,
+  "authUsername": "admin",
+  "authPassword": "********",
+  "mdns": "honda-ecu",
+  "sessionTimeout": 30,
+  "initMode": "fast"
+}

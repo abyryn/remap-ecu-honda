@@ -1,0 +1,17 @@
+{
+  "rpm": 1850,
+  "tps": 1.2,
+  "map": 34.0,
+  "iat": 35.1,
+  "ect": 87.3,
+  "battVoltage": 12.43,
+  "injPulseWidth": 2.145,
+  "ignTiming": 15.0,
+  "vehicleSpeed": 0,
+  "engineLoad": 18.4,
+  "idleSwitch": true,
+  "o2Sensor": 450.0,
+  "closedLoop": true,
+  "fuelTrim": -2.3,
+  "timestamp": 45231123
+}
