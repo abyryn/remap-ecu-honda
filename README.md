@@ -17,7 +17,7 @@
 
 <br/>
 
-![Dashboard Preview](https://via.placeholder.com/900x480/1e2235/e8343a?text=Honda+ECU+Tool+—+Dashboard)
+![Dashboard Preview](screen shot/Screenshot 2026-07-14 233720.png)
 
 </div>
 
