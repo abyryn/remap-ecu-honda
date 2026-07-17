@@ -1,6 +1,6 @@
 {
   "appId": "com.hondaecutool.app",
-  "appName": "Honda ECU Tool",
+  "appName": "WRT Ecu Tools",
   "webDir": "www",
   "server": {
     "androidScheme": "https",

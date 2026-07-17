@@ -11,13 +11,13 @@ param(
     [switch]$Clean
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 function Write-Header($text) {
     Write-Host ""
-    Write-Host "══════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "==========================================" -ForegroundColor Cyan
     Write-Host " $text" -ForegroundColor White
-    Write-Host "══════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "==========================================" -ForegroundColor Cyan
 }
 
 function Write-Step($text) {
@@ -25,11 +25,11 @@ function Write-Step($text) {
 }
 
 function Write-OK($text) {
-    Write-Host "[✓] $text" -ForegroundColor Green
+    Write-Host "[OK] $text" -ForegroundColor Green
 }
 
 function Write-Err($text) {
-    Write-Host "[✗] $text" -ForegroundColor Red
+    Write-Host "[ERR] $text" -ForegroundColor Red
 }
 
 $ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -39,13 +39,13 @@ $JDK_DIR     = "C:\Program Files\Eclipse Adoptium\jdk-17"
 $SDK_DIR     = "$env:LOCALAPPDATA\Android\Sdk"
 $TOOLS_DIR   = "$SDK_DIR\cmdline-tools\latest\bin"
 
-Write-Header "Honda ECU Tool — APK Builder"
+Write-Header "WRT Ecu Tools - APK Builder"
 Write-Host " Versi  : 1.0.0" -ForegroundColor Gray
 Write-Host " Mode   : $(if ($Release) { 'RELEASE' } else { 'DEBUG' })" -ForegroundColor Gray
 Write-Host ""
 
 # ---- Step 1: Check Node.js ----
-Write-Header "Step 1 — Node.js"
+Write-Header "Step 1 - Node.js"
 try {
     $nodeVer = node --version
     Write-OK "Node.js ditemukan: $nodeVer"
@@ -55,32 +55,54 @@ try {
 }
 
 # ---- Step 2: Install JDK 17 ----
-Write-Header "Step 2 — Java JDK 17"
+Write-Header "Step 2 - Java JDK 17"
 
 if ($SkipJDK) {
     Write-Step "Skip JDK install (--SkipJDK)"
 } elseif (Test-Path "$JDK_DIR\bin\java.exe") {
     Write-OK "JDK 17 sudah ada di $JDK_DIR"
 } else {
-    # Coba cari java di PATH
-    $javaPath = Get-Command java -ErrorAction SilentlyContinue
-    if ($javaPath) {
-        $javaVer = java -version 2>&1 | Select-String "version" | Head -1
-        Write-OK "Java ditemukan: $javaVer"
-        $JDK_DIR = Split-Path (Split-Path $javaPath.Source)
-    } else {
-        Write-Step "Mengunduh dan menginstall JDK 17 via winget..."
-        try {
-            winget install --id EclipseAdoptium.Temurin.17.JDK -e --silent --accept-package-agreements --accept-source-agreements
-            Write-OK "JDK 17 berhasil diinstall"
-        } catch {
-            Write-Host ""
-            Write-Err "Install JDK gagal. Install manual dari:"
-            Write-Host "  https://adoptium.net/temurin/releases/?version=17" -ForegroundColor Cyan
-            Write-Host "  Pilih: Windows x64 .msi"
-            Write-Host ""
-            Write-Host "Setelah install, jalankan script ini lagi." -ForegroundColor Yellow
-            exit 1
+    # Cari di lokasi umum dulu sebelum winget atau PATH
+    $foundJava = $false
+    $possibleJDKs = @(
+        "C:\Program Files\Eclipse Adoptium",
+        "C:\Program Files\Java",
+        "C:\Program Files\Microsoft",
+        "C:\Program Files\BellSoft"
+    )
+    foreach ($dir in $possibleJDKs) {
+        if (Test-Path $dir) {
+            $jdkFound = Get-ChildItem $dir -Directory | Where-Object { $_.Name -like "jdk*17*" -or $_.Name -like "jdk-17*" } | Select-Object -First 1
+            if ($jdkFound -and (Test-Path "$($jdkFound.FullName)\bin\java.exe")) {
+                $JDK_DIR = $jdkFound.FullName
+                Write-OK "JDK 17 ditemukan di $JDK_DIR"
+                $foundJava = $true
+                break
+            }
+        }
+    }
+    
+    if (-not $foundJava) {
+        # Coba cari java di PATH
+        $javaPath = Get-Command java -ErrorAction SilentlyContinue
+        if ($javaPath) {
+            $javaVer = java -version 2>&1 | Select-String "version" | Head -1
+            Write-OK "Java ditemukan: $javaVer"
+            $JDK_DIR = Split-Path (Split-Path $javaPath.Source)
+        } else {
+            Write-Step "Mengunduh dan menginstall JDK 17 via winget..."
+            try {
+                winget install --id EclipseAdoptium.Temurin.17.JDK -e --silent --accept-package-agreements --accept-source-agreements
+                Write-OK "JDK 17 berhasil diinstall"
+            } catch {
+                Write-Host ""
+                Write-Err "Install JDK gagal. Install manual dari:"
+                Write-Host "  https://adoptium.net/temurin/releases/?version=17" -ForegroundColor Cyan
+                Write-Host "  Pilih: Windows x64 .msi"
+                Write-Host ""
+                Write-Host "Setelah install, jalankan script ini lagi." -ForegroundColor Yellow
+                exit 1
+            }
         }
     }
 }
@@ -112,7 +134,7 @@ if (Test-Path "$JDK_DIR\bin\java.exe") {
 }
 
 # ---- Step 3: Android SDK ----
-Write-Header "Step 3 — Android SDK"
+Write-Header "Step 3 - Android SDK"
 
 if ($SkipSDK) {
     Write-Step "Skip SDK setup (--SkipSDK)"
@@ -158,7 +180,7 @@ if (Test-Path "$TOOLS_DIR\sdkmanager.bat") {
 }
 
 # ---- Step 4: Install npm dependencies ----
-Write-Header "Step 4 — NPM Dependencies (Capacitor)"
+Write-Header "Step 4 - NPM Dependencies (Capacitor)"
 
 Set-Location $ProjectDir
 if (-not (Test-Path "node_modules")) {
@@ -170,7 +192,7 @@ if (-not (Test-Path "node_modules")) {
 }
 
 # ---- Step 5: Capacitor sync ----
-Write-Header "Step 5 — Capacitor Sync"
+Write-Header "Step 5 - Capacitor Sync"
 Write-Step "npx cap sync android..."
 try {
     npx cap sync android 2>&1
@@ -180,7 +202,7 @@ try {
 }
 
 # ---- Step 6: Build APK ----
-Write-Header "Step 6 — Build APK"
+Write-Header "Step 6 - Build APK"
 
 Set-Location $AndroidDir
 
@@ -199,29 +221,32 @@ if ($Release) {
     $outputPath = "app\build\outputs\apk\debug\app-debug.apk"
 }
 
-& ".\gradlew.bat" $buildTarget --no-daemon 2>&1
+$OldErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+& ".\gradlew.bat" $buildTarget --no-daemon
+$ErrorActionPreference = $OldErrorActionPreference
 
 if (Test-Path $outputPath) {
     $apkSizeMB = [math]::Round((Get-Item $outputPath).Length / 1MB, 2)
     Write-Host ""
-    Write-OK "═══════════════════════════════════"
+    Write-OK "==================================="
     Write-OK " APK BERHASIL DIBUILD!"
-    Write-OK "═══════════════════════════════════"
+    Write-OK "==================================="
     Write-Host ""
     Write-Host " File: $outputPath" -ForegroundColor Cyan
     Write-Host " Size: $apkSizeMB MB" -ForegroundColor Cyan
     Write-Host ""
 
     # Copy ke folder utama
-    $destApk = Join-Path $ProjectDir "HondaECUTool-v1.0.0-$(if($Release){'release'}else{'debug'}).apk"
+    $destApk = Join-Path $ProjectDir "WRTEcuTools-v1.0.0-$(if($Release){'release'}else{'debug'}).apk"
     Copy-Item $outputPath $destApk -Force
     Write-OK "APK disalin ke: $destApk"
     Write-Host ""
     Write-Host " Cara install di HP Android:" -ForegroundColor Yellow
     Write-Host " 1. Transfer file APK ke HP via USB atau WhatsApp" -ForegroundColor White
     Write-Host " 2. Buka file manager di HP" -ForegroundColor White
-    Write-Host " 3. Tap file APK → Install" -ForegroundColor White
-    Write-Host " 4. Jika ada 'Unknown Sources', aktifkan di Settings → Security" -ForegroundColor White
+    Write-Host " 3. Tap file APK -> Install" -ForegroundColor White
+    Write-Host " 4. Jika ada 'Unknown Sources', aktifkan di Settings -> Security" -ForegroundColor White
     Write-Host ""
 } else {
     Write-Err "Build gagal! APK tidak ditemukan di $outputPath"
