@@ -401,7 +401,7 @@ FlashResult FlashManager::_readBlocks(uint32_t startAddr, size_t size,
 
         esp_task_wdt_reset();  // Feed watchdog
 
-        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, size - blocksDone * FLASH_BLOCK_SIZE);
+        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, (size_t)(size - blocksDone * FLASH_BLOCK_SIZE));
 
         // Build read request
         uint8_t req[8];
@@ -513,7 +513,7 @@ FlashResult FlashManager::_writeBlocks(const uint8_t* data, uint32_t startAddr, 
 
         esp_task_wdt_reset();
 
-        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, size - blocksDone * FLASH_BLOCK_SIZE);
+        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, (size_t)(size - blocksDone * FLASH_BLOCK_SIZE));
 
         // Build write request
         uint8_t req[FLASH_BLOCK_SIZE + 8];
@@ -620,7 +620,7 @@ FlashResult FlashManager::_verifyBlocks(const uint8_t* expected, size_t size, Fl
     for (uint32_t b = 0; b < totalBlocks; b++) {
         esp_task_wdt_reset();
 
-        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, size - b * FLASH_BLOCK_SIZE);
+        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, (size_t)(size - b * FLASH_BLOCK_SIZE));
 
         uint8_t req[8];
         req[0] = 0x05;

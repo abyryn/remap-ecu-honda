@@ -2,6 +2,8 @@
 // api.cpp - REST API Implementation
 // ============================================================
 #include "include/api.h"
+#include "include/settings.h"
+#include "include/utils.h"
 #include "include/ecu.h"
 #include "include/kline.h"
 #include "include/logger.h"

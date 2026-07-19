@@ -51,7 +51,12 @@ void setup() {
     digitalWrite(LED_PIN, HIGH);
 
     // --- Watchdog ---
-    esp_task_wdt_init(WDT_TIMEOUT_SEC, true);
+    esp_task_wdt_config_t wdt_config = {
+        .timeout_ms = WDT_TIMEOUT_SEC * 1000,
+        .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
+        .trigger_panic = true
+    };
+    esp_task_wdt_init(&wdt_config);
     esp_task_wdt_add(nullptr);
 
     // --- Logger ---

@@ -29,7 +29,7 @@ bool OTAManager::begin(size_t totalSize) {
 bool OTAManager::write(const uint8_t* data, size_t len) {
     if (_state != OTA_UPLOADING) return false;
 
-    size_t written = Update.write(data, len);
+    size_t written = Update.write(const_cast<uint8_t*>(data), len);
     if (written != len) {
         _error = Update.errorString();
         _state = OTA_ERROR;
