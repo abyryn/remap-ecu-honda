@@ -4,13 +4,16 @@
 #include "include/filesystem.h"
 #include "include/config.h"
 #include <ArduinoJson.h>
+#include <esp_task_wdt.h>
 
 FileSystemClass FS_Mgr;
 
 FileSystemClass::FileSystemClass() : _mounted(false) {}
 
 bool FileSystemClass::begin() {
-    if (!LittleFS.begin(true)) {  // true = format on fail
+    bool res = LittleFS.begin(true); // true = format on fail
+
+    if (!res) {
         Serial.println("[FS] LittleFS mount failed");
         return false;
     }

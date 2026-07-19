@@ -51,13 +51,9 @@ void setup() {
     digitalWrite(LED_PIN, HIGH);
 
     // --- Watchdog ---
-    esp_task_wdt_config_t wdt_config = {
-        .timeout_ms = WDT_TIMEOUT_SEC * 1000,
-        .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
-        .trigger_panic = true
-    };
-    esp_task_wdt_init(&wdt_config);
-    esp_task_wdt_add(nullptr);
+    // Completely disable TWDT because LittleFS format locks the flash cache and starves both CPU cores.
+#include <esp_task_wdt.h>
+    esp_task_wdt_deinit();
 
     // --- Logger ---
     Logger.begin(LOG_DEBUG);
@@ -113,8 +109,7 @@ void setup() {
 
 // ============================================================
 void loop() {
-    // Feed watchdog
-    esp_task_wdt_reset();
+    // Watchdog feeding is handled by Arduino automatically (yield/delay)
 
     // LED status indicator
     updateLED();
