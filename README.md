@@ -2,9 +2,9 @@
 
 # 🏍️ WRT Garage
 
-**Alat diagnostik ECU Honda berbasis ESP32 dengan antarmuka web modern**
+**Alat diagnostik, remap, dan backup ECU Honda berbasis ESP32 dengan antarmuka web modern**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-e8343a?style=for-the-badge)](https://github.com)
+[![Version](https://img.shields.io/badge/version-2.0.0-e8343a?style=for-the-badge)](https://github.com)
 [![Platform](https://img.shields.io/badge/platform-ESP32-blue?style=for-the-badge&logo=espressif)](https://www.espressif.com)
 [![Framework](https://img.shields.io/badge/framework-Arduino-teal?style=for-the-badge&logo=arduino)](https://arduino.cc)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
@@ -12,7 +12,7 @@
 
 <br/>
 
-> Baca, diagnosa, dan backup ECU Honda langsung dari browser — tanpa laptop, tanpa kabel OBD ke PC.
+> Baca, diagnosa, edit tabel remap, dan backup/restore ECU Honda langsung dari browser — tanpa laptop, tanpa kabel OBD ke PC.
 > Cukup ESP32, optocoupler 4N25, dan koneksi WiFi lokal.
 
 <br/>
@@ -27,14 +27,16 @@
 
 | Kategori | Fitur |
 |---|---|
-| 🔌 **Koneksi ECU** | Fast Init, 5-Baud Init, Auto Detect, Retry otomatis, CRC validation |
-| 📊 **Live Data** | 14 sensor realtime (RPM, TPS, MAP, IAT, ECT, O2, dll) + grafik |
+| 🔌 **Koneksi ECU** | Fast Init (ISO 14230), 5-Baud Init (ISO 9141), Auto Detect, Retry otomatis, CRC validation |
+| 📊 **Live Data** | 14 sensor realtime (RPM, TPS, MAP, IAT, ECT, O2, dll) + grafik interaktif |
 | 🚨 **Diagnostik** | Read DTC, Clear DTC, MIL status, pending fault codes |
-| 💾 **Backup** | Baca EEPROM → simpan .bin ke LittleFS + verifikasi checksum |
-| 🔄 **Restore** | Simulasi restore — bandingkan file vs ECU tanpa write |
+| 🗺️ **Map Editor** | Visualisasi 2D/3D tabel remap (Fuel Map, Ignition Map), edit sel, import/export map |
+| ⚡ **Flash Manager** | Read Flash/EEPROM, Write, Erase, Verify CRC, Auto Backup, Recovery mode |
+| 💾 **Backup & Restore** | Baca EEPROM → simpan .bin ke LittleFS + verifikasi checksum |
 | 🖥️ **Terminal** | Manual K-Line terminal — HEX send/receive + history + export |
 | 📋 **Logger** | Session log TX/RX + export CSV/TXT |
-| ⚙️ **Settings** | Konfigurasi WiFi, baudrate, auth — tersimpan di flash |
+| 🔐 **Keamanan** | Protection PIN, HTTP Basic Auth, enkripsi AES-128 untuk operasi sensitif |
+| ⚙️ **Settings** | Konfigurasi WiFi, baudrate, auth, voltage divider — tersimpan di flash |
 | 🔆 **OTA Update** | Upload firmware baru via browser tanpa cabut USB |
 | 🌐 **Web UI** | Single Page App responsive — dark/light mode, glassmorphism |
 
@@ -242,6 +244,8 @@ pio run --target uploadfs
 | `GET /api/files?path=/backup` | List file di direktori LittleFS |
 | `GET /api/settings` | Konfigurasi saat ini |
 | `GET /api/log/export` | Download log sebagai CSV |
+| `GET /api/maps` | Daftar tabel map ECU yang tersedia |
+| `GET /api/map/get?id=x` | Ambil data tabel remap berdasarkan ID |
 
 ### POST Endpoints
 
@@ -259,6 +263,13 @@ pio run --target uploadfs
 | `POST /api/settings` | Update konfigurasi `🔒 auth` |
 | `POST /api/kline-send` | Kirim raw HEX ke K-Line |
 | `POST /api/set-model` | Set model kendaraan Honda |
+| `POST /api/map/save` | Simpan perubahan tabel remap `🔒 auth` |
+| `POST /api/ecu/read` | Baca memori Flash ECU `🔒 auth` |
+| `POST /api/ecu/write` | Flash binary baru ke ECU `🔒 auth` |
+| `POST /api/ecu/erase` | Erase blok memori Flash `🔒 auth` |
+| `POST /api/ecu/verify` | Verifikasi checksum CRC Flash `🔒 auth` |
+| `POST /api/ecu/reset` | Soft reset ECU `🔒 auth` |
+| `POST /api/ecu/recovery` | Eksekusi prosedur recovery ECU `🔒 auth` |
 | `POST /api/reboot` | Reboot ESP32 `🔒 auth` |
 | `POST /api/ota` | Upload firmware baru `🔒 auth` |
 
@@ -346,6 +357,36 @@ pio run --target uploadfs
 | `GPIO 17` | K-Line TX | Serial2 TX, via 4N25 optocoupler |
 | `GPIO 34` | Voltage Monitor | ADC input, via voltage divider |
 | `GPIO 2` | Status LED | Built-in LED |
+
+---
+
+## 🔍 Panduan Problem Solving / Troubleshooting Koneksi ECU
+
+Jika ESP32 gagal terhubung dengan ECU Honda (**Gagal Connect / Timeout**), ikuti panduan pemeriksaan berikut:
+
+### 1. Pemeriksaan Fisik & Pengabelan (Hardware Check)
+* **Kunci Kontak & Mesin**: Kunci kontak motor **harus ON**, tetapi **mesin harus MATI** (RPM = 0). ECU menolak inisialisasi diagnostik saat mesin berputar.
+* **Ground Bersama (Common Ground)**: Pastikan **GND ESP32 tersambung fisik dengan GND aki / kendaraan**. Tanpa ground bersama, sinyal K-Line melayang (*floating*).
+* **Resistor Pull-up K-Line**: Jalur K-Line adalah *Open Collector*, membutuhkan resistor **pull-up (1kΩ - 4.7kΩ ke 12V atau 5V)** agar sinyal bisa kembali ke logika HIGH saat idle.
+* **Inverter Logika Optocoupler (4N25)**: Transistor/Optocoupler membalikkan logika TX. Jika skema optocoupler salah, jalur TX bisa menahan K-Line di LOW terus-menerus.
+* **Pin RX & TX ESP32**: Pastikan `GPIO17` terhubung ke pemancar (TX) dan `GPIO16` ke penerima (RX). Pastikan pin tidak tertukar.
+* **Tegangan Aki (< 11.5V)**: Jika tegangan aki terlalu rendah, ECU mengabaikan sinyal inisialisasi. Cek indikator *Voltage Monitor* di Web UI (harus > 11.5V).
+
+### 2. Penyesuaian Mode Inisialisasi K-Line
+ECU Honda Keihin dan Shindengen memiliki metode *wake-up* yang bervariasi:
+* **Fast Init (ISO 14230)**: Pulsa LOW 25ms $\rightarrow$ HIGH 25ms $\rightarrow$ Kirim request `0xC1 0x33 0xF1 0x81`.
+* **5-Baud Init (ISO 9141)**: Bit-bang alamat `0x33` pada kecepatan 5 baud sebelum beralih ke 10400 bps.
+* *Solusi*: Masuk ke Web UI $\rightarrow$ **Settings**, ubah mode dari **Auto Detect** ke **Fast Init** saja atau **5-Baud Init** saja secara manual.
+
+### 3. Kompatibilitas Sistem (K-Line vs CAN Bus)
+* Motor Honda terbaru (seperti PCX 160, ADV 160 keluaran baru, atau standar Euro 5 dengan colokan OBD2 16-pin warna merah/hitam) beralih menggunakan **CAN Bus (500 kbps)**. Rangkaian K-Line 10400 bps tidak kompatibel dengan ECU CAN Bus tanpa transceiver CAN (MCP2515 / SN65HVD230).
+
+### 4. Langkah Debugging via Serial Monitor / Web Terminal
+1. Hubungkan ESP32 ke PC dan buka **Serial Monitor** di baud rate `115200`.
+2. Amati pesan log:
+   * **`Fast Init: no response (len=0)`** $\rightarrow$ Sinyal tidak masuk ke ECU (Cek fisik kabel, kunci kontak, & pull-up).
+   * **`CRC Error` / Data Sampah** $\rightarrow$ Ada noise sinyal K-Line atau baud rate tidak pas.
+3. Buka menu **Terminal** pada Web UI (`http://192.168.4.1`) untuk menguji pengiriman data HEX manual.
 
 ---
 
