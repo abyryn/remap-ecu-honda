@@ -69,6 +69,15 @@ bool ECUManager::connect() {
         return true;
     }
 
+    // Attempt Honda PGM-FI Motorcycle session start (72 05 71 00 18)
+    uint8_t hdsReq[] = {0x72, 0x05, 0x71, 0x00, 0x18};
+    r = KLine.request(hdsReq, 5, resp, respLen, 1000);
+    if (r == KLINE_OK && respLen >= 3 && (resp[0] == 0x72 || resp[0] == 0xFE)) {
+        _state = ECU_CONNECTED;
+        Logger.log(LOG_INFO, "ECU", "Honda PGM-FI Session started OK");
+        return true;
+    }
+
     // Some Honda ECUs respond without start session — try reading ID directly
     if (readIdentification()) {
         _state = ECU_CONNECTED;

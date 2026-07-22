@@ -11,17 +11,20 @@ KLineDriver KLine;
 // ---- Constructor ----
 KLineDriver::KLineDriver()
     : _serial(nullptr), _txPin(KLINE_TX_PIN), _rxPin(KLINE_RX_PIN),
-      _baud(KLINE_BAUD), _initialized(false), _retryMax(KLINE_RETRY_MAX) {}
+      _baud(KLINE_BAUD), _invert(false), _echoCancel(true),
+      _initialized(false), _retryMax(KLINE_RETRY_MAX) {}
 
 // ---- begin ----
-void KLineDriver::begin(uint8_t txPin, uint8_t rxPin, uint32_t baud) {
+void KLineDriver::begin(uint8_t txPin, uint8_t rxPin, uint32_t baud, bool invert) {
     _txPin  = txPin;
     _rxPin  = rxPin;
     _baud   = baud;
+    _invert = invert;
     _serial = &Serial2;
-    _serial->begin(baud, SERIAL_8N1, rxPin, txPin);
+    _serial->begin(baud, SERIAL_8N1, rxPin, txPin, invert);
     _flush();
-    Logger.log(LOG_INFO, "KLine", "UART init TX=%d RX=%d baud=%d", txPin, rxPin, baud);
+    Logger.log(LOG_INFO, "KLine", "UART init TX=%d RX=%d baud=%d invert=%s", 
+               txPin, rxPin, baud, invert ? "true" : "false");
 }
 
 // ---- end ----
@@ -62,56 +65,72 @@ KLineResult KLineDriver::init(KLineInitMode mode) {
     return KLINE_ERR_RETRY;
 }
 
-// ---- Fast Init (ISO 14230) ----
-// Pull K-Line LOW 25ms, then HIGH 25ms, then send 0xC1 0x33 0xF1 0x81
+// ---- Fast Init (Honda HDS / ISO 14230) ----
 KLineResult KLineDriver::_fastInit() {
     _flush();
 
-    // Temporarily take over TX pin for bit-bang
-    _serial->end();
+    // Temporarily take over TX pin for bit-bang wake up pulse
+    if (_serial) _serial->end();
     pinMode(_txPin, OUTPUT);
 
     // --- WAKE UP PATTERN ---
+    // Honda Keihin/Shindengen motorcycle ECUs: 70ms LOW, 130ms HIGH
     digitalWrite(_txPin, LOW);
-    delay(25);
+    delay(70);
     digitalWrite(_txPin, HIGH);
-    delay(25);
+    delay(130);
 
-    // Re-init UART
-    _serial->begin(_baud, SERIAL_8N1, _rxPin, _txPin);
-    delay(10);
-    _flush();
+    // Re-init UART with inversion configuration preserved
+    _serial->begin(_baud, SERIAL_8N1, _rxPin, _txPin, _invert);
+    delay(20);
+    _flush(); // Clear break condition noise (0x00 / 0xFF)
 
-    // Send Start Communication request: 0xC1 0x33 0xF1 0x81 + checksum
-    uint8_t req[]  = {0xC1, 0x33, 0xF1, 0x81};
-    uint8_t chk    = calcChecksum(req, 4);
-    uint8_t frame[5];
-    memcpy(frame, req, 4);
-    frame[4] = chk;
-
-    Logger.logHex(LOG_DEBUG, "KLine TX", frame, 5);
-    _serial->write(frame, 5);
-    _serial->flush();
-
-    // Wait for echo / response
-    uint8_t resp[16];
+    uint8_t resp[32];
     size_t  respLen = 0;
-    KLineResult r   = receiveRaw(resp, respLen, 300);
 
-    if (r != KLINE_OK || respLen < 3) {
-        Logger.log(LOG_WARN, "KLine", "Fast Init: no response (len=%d)", respLen);
-        return KLINE_ERR_TIMEOUT;
+    // Attempt 1: Honda HDS Init Frame (FE 04 72 8C)
+    uint8_t hdsReq[] = {0xFE, 0x04, 0x72, 0x8C};
+    Logger.logHex(LOG_DEBUG, "KLine TX (Honda HDS Init)", hdsReq, 4);
+    _serial->write(hdsReq, 4);
+    _serial->flush();
+    if (_echoCancel) _drainEcho(4, 50);
+
+    KLineResult r = receiveRaw(resp, respLen, 300);
+    if (r == KLINE_OK && respLen >= 3 && resp[0] != 0x00 && validateChecksum(resp, respLen)) {
+        Logger.logHex(LOG_DEBUG, "KLine RX (HDS Response)", resp, respLen);
+        return KLINE_OK;
     }
 
-    Logger.logHex(LOG_DEBUG, "KLine RX", resp, respLen);
-    return KLINE_OK;
+    Logger.log(LOG_WARN, "KLine", "HDS Init: no valid response, trying ISO 14230 (C1 33 F1 81)");
+
+    // Attempt 2: ISO 14230 Start Communication (C1 33 F1 81 66)
+    _flush();
+    uint8_t isoReq[] = {0xC1, 0x33, 0xF1, 0x81};
+    uint8_t chk      = calcChecksum(isoReq, 4);
+    uint8_t frame[5];
+    memcpy(frame, isoReq, 4);
+    frame[4] = chk;
+
+    Logger.logHex(LOG_DEBUG, "KLine TX (ISO Init)", frame, 5);
+    _serial->write(frame, 5);
+    _serial->flush();
+    if (_echoCancel) _drainEcho(5, 50);
+
+    respLen = 0;
+    r = receiveRaw(resp, respLen, 300);
+    if (r == KLINE_OK && respLen >= 3 && resp[0] != 0x00 && validateChecksum(resp, respLen)) {
+        Logger.logHex(LOG_DEBUG, "KLine RX (ISO Response)", resp, respLen);
+        return KLINE_OK;
+    }
+
+    Logger.log(LOG_WARN, "KLine", "Fast Init failed: no valid response from ECU");
+    return KLINE_ERR_TIMEOUT;
 }
 
 // ---- 5-Baud Init (ISO 9141) ----
-// Bit-bang address byte 0x33 at 5 baud, then wait for 0x55 sync
 KLineResult KLineDriver::_5baudInit() {
     _flush();
-    _serial->end();
+    if (_serial) _serial->end();
 
     pinMode(_txPin, OUTPUT);
     digitalWrite(_txPin, HIGH);
@@ -120,16 +139,24 @@ KLineResult KLineDriver::_5baudInit() {
     // Bit-bang 0x33 (address for ECU broadcast) at 5 baud = 200ms/bit
     _bitBangByte(0x33, 5);
 
-    // Re-init UART at 10400
-    _serial->begin(_baud, SERIAL_8N1, _rxPin, _txPin);
-    delay(10);
+    // Re-init UART at 10400 with inversion configuration
+    _serial->begin(_baud, SERIAL_8N1, _rxPin, _txPin, _invert);
+    delay(20);
     _flush();
+
+    // Drain TX echo from bit-bang
+    if (_echoCancel) {
+        _drainEcho(1, 50);
+    }
 
     // Wait for sync byte 0x55 from ECU (up to 500ms)
     uint32_t t = millis();
     while (millis() - t < 500) {
         if (_serial->available()) {
             uint8_t b = _serial->read();
+            // Skip noise 0x00 or 0xFF before sync byte
+            if (b == 0x00 || b == 0xFF) continue;
+
             Logger.log(LOG_DEBUG, "KLine", "5Baud sync byte: 0x%02X", b);
             if (b == 0x55) {
                 // Read keyword bytes (W1, W2) and inverted W2
@@ -140,12 +167,12 @@ KLineResult KLineDriver::_5baudInit() {
                 // Send ~W2
                 if (kwLen >= 2) {
                     uint8_t ackByte = ~kw[1];
-                    _serial->write(ackByte);
-                    _serial->flush();
+                    sendRaw(&ackByte, 1);
                 }
                 return KLINE_OK;
             }
         }
+        yield();
     }
 
     Logger.log(LOG_WARN, "KLine", "5-Baud: no sync byte");
@@ -171,12 +198,37 @@ void KLineDriver::_bitBangByte(uint8_t byte, uint32_t baud) {
     delayMicroseconds(bitTimeUs);
 }
 
+// ---- Drain TX echo on single-wire K-Line ----
+void KLineDriver::_drainEcho(size_t echoLen, uint32_t timeoutMs) {
+    if (!_serial) return;
+    uint32_t start = millis();
+    size_t drained = 0;
+    while (drained < echoLen && (millis() - start < timeoutMs)) {
+        if (_serial->available()) {
+            _serial->read();
+            drained++;
+        }
+        yield();
+    }
+    // Small delay to allow trailing echo/noise to settle, then clear remaining buffer
+    delay(5);
+    while (_serial->available()) {
+        _serial->read();
+    }
+}
+
 // ---- sendRaw ----
 KLineResult KLineDriver::sendRaw(const uint8_t* data, size_t len) {
     if (!_serial) return KLINE_ERR_GENERAL;
+    _flush();
     Logger.logHex(LOG_DEBUG, "KLine TX", data, len);
     _serial->write(data, len);
     _serial->flush();
+
+    // Drain TX Echo
+    if (_echoCancel) {
+        _drainEcho(len, 50);
+    }
     return KLINE_OK;
 }
 
@@ -186,9 +238,20 @@ KLineResult KLineDriver::receiveRaw(uint8_t* buf, size_t& len, uint32_t timeoutM
     if (!_serial) return KLINE_ERR_GENERAL;
 
     uint32_t start = millis();
+    bool receivingStarted = false;
+
     while (millis() - start < timeoutMs) {
         if (_serial->available()) {
-            buf[len++] = _serial->read();
+            uint8_t b = _serial->read();
+
+            // Ignore leading noise / break condition bytes (0x00 or 0xFF) before frame starts
+            if (!receivingStarted && (b == 0x00 || b == 0xFF)) {
+                Logger.log(LOG_DEBUG, "KLine", "Ignoring leading noise byte: 0x%02X", b);
+                continue;
+            }
+
+            receivingStarted = true;
+            buf[len++] = b;
             // Reset timeout on each byte received
             start = millis();
             if (len >= 255) break;
