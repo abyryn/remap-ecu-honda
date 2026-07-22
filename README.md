@@ -209,7 +209,7 @@ Tools → ESP32 LittleFS Data Upload
 
 ```bash
 # Clone project
-git clone https://github.com/YOUR_USERNAME/honda-ecu-tool.git
+git clone https://github.com/abyryn/honda-ecu-tool.git
 cd honda-ecu-tool
 
 # Upload firmware
