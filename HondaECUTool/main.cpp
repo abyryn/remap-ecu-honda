@@ -80,7 +80,12 @@ void setup() {
     WiFiAP.startMDNS("honda-ecu");
 
     // --- K-Line UART ---
-    KLine.begin(KLINE_TX_PIN, KLINE_RX_PIN, Settings.get().uartBaud);
+    // Pass pin DTR/CTS dari Settings (useDTR/useCTS sebagai flag enable)
+    int8_t dtrPin = Settings.get().useDTR ? Settings.get().dtrPin : -1;
+    int8_t ctsPin = Settings.get().useCTS ? Settings.get().ctsPin : -1;
+    KLine.begin(KLINE_TX_PIN, KLINE_RX_PIN, Settings.get().uartBaud,
+                false, dtrPin, ctsPin);
+
 
     // --- Web Server + WebSocket ---
     WebSrv.begin();

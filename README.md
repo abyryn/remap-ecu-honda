@@ -85,35 +85,47 @@
 | No | Komponen | Spesifikasi | Qty |
 |---|---|---|---|
 | 1 | ESP32 DOIT DevKit V1 | 240MHz dual-core, WiFi, 4MB Flash | 1 |
-| 2 | Optocoupler | 4N25 | 1 |
-| 3 | NPN Transistor | BC547 / 2N2222 | 1 |
-| 4 | Resistor | 1kΩ, 4.7kΩ, 10kΩ, 20kΩ, 33kΩ, 330Ω | masing-masing 1 |
-| 5 | LED | 3mm / 5mm, warna bebas | 1 |
-| 6 | Buck Converter | 12V → 5V, min 500mA | 1 |
-| 7 | OBD Connector | 4-pin Honda atau OBD2 universal | 1 |
-| 8 | Fuse | 1A | 1 |
+| 2 | Optocoupler (TX/RX) | 4N35 | 1 |
+| 3 | Optocoupler (DTR/CTS) | 4N35 | 1 |
+| 4 | NPN Transistor | BC547 / 2N2222 | 1 |
+| 5 | Resistor | 1kΩ, 4.7kΩ, 10kΩ, 20kΩ, 33kΩ, 330Ω | masing-masing 1 |
+| 6 | LED | 3mm / 5mm, warna bebas | 1 |
+| 7 | Buck Converter | 12V → 5V, min 500mA | 1 |
+| 8 | OBD Connector | 4-pin Honda atau OBD2 universal | 1 |
+| 9 | Fuse | 1A | 1 |
 
 ### Wiring Diagram
 
 ```
 ESP32 DOIT V1
 ─────────────────────────────────────────────────────
-  GPIO17 (TX) ──[ 1kΩ ]──[ LED IN 4N25 ]── GND
-  GPIO16 (RX) ──────────[ Collector 4N25 ]── [ 4.7kΩ Pull-up → 5V ]
+  GPIO17 (TX) ──[ 1kΩ ]──[ LED IN 4N35 #1 ]── GND      ← K-Line TX
+  GPIO16 (RX) ──────────[ Collector 4N35 #1 ]── [ 4.7kΩ Pull-up → 5V ]
                                       │
-  GPIO34 (ADC)──[ 33kΩ ]──┬──[ 10kΩ ]──GND     ← Voltage monitor
+  GPIO18 (DTR)──[ 1kΩ ]──[ LED IN 4N35 #2 ]── GND      ← TX Enable Gate
+  GPIO19 (CTS)──────────[ Collector 4N35 #2 ]── [ 4.7kΩ Pull-up → 5V ]
+                                      │
+  GPIO34 (ADC)──[ 33kΩ ]──┬──[ 10kΩ ]──GND              ← Voltage monitor
                            └── GPIO34
-  GPIO2  (LED)──[ 330Ω ]──[ LED ]── GND          ← Status indicator
-  GND ────────────────────────────────────────── GND
+  GPIO2  (LED)──[ 330Ω ]──[ LED ]── GND                 ← Status indicator
+  GND ───────────────────────────────────────────── GND
   5V  ────────────────────── Buck Converter Output
 
-4N25 Optocoupler
+4N35 #1 — K-Line TX/RX (Data Path)
 ─────────────────────────────────────────────────────
-  Pin 1 (Anode)    ← 1kΩ ← GPIO17 ESP32
+  Pin 1 (Anode)    ← 1kΩ ← GPIO17 (TX) ESP32
   Pin 2 (Cathode)  → GND
   Pin 4 (Emitter)  → GND
-  Pin 5 (Collector)→ K-Line (Honda OBD) & GPIO16 RX
+  Pin 5 (Collector)→ K-Line (Honda OBD) & GPIO16 (RX)
   Pin 5 juga       → 4.7kΩ Pull-up → 5V
+
+4N35 #2 — DTR / CTS (Flow Control Path) ← BARU
+─────────────────────────────────────────────────────
+  Pin 1 (Anode)    ← 1kΩ ← GPIO18 (DTR) ESP32
+  Pin 2 (Cathode)  → GND
+  Pin 4 (Emitter)  → GND
+  Pin 5 (Collector)→ Terhubung ke K-Line bus SETELAH 4N35 #1
+  Pin 5 juga       → 4.7kΩ Pull-up → 5V → GPIO19 (CTS) ESP32
 
 Voltage Divider RX (5V → 3.3V)
 ─────────────────────────────────────────────────────
@@ -124,6 +136,29 @@ Voltage Divider Monitor (+12V → ADC)
 ─────────────────────────────────────────────────────
   OBD +12V ── 33kΩ ──┬── GPIO34
                       └── 10kΩ ── GND
+```
+
+### Cara Kerja CTS/DTR
+
+```
+Komunikasi Normal:
+
+  ESP32                   4N35 #2              K-Line Bus
+  ─────────────────────   ───────────────────   ─────────────
+  [DTR HIGH] ──────────→  LED ON → Collector   Bus tersambung
+  [CTS check]←──────────  CTS HIGH = Idle      Bus bebas → OK TX
+  [TX kirim data] ───────────────────────────→ ECU menerima
+  [DTR LOW]  ──────────→  LED OFF → Collector  Gate tertutup
+
+
+Deteksi Bus Collision (ECU sedang TX):
+
+  ECU                     K-Line Bus            ESP32
+  ─────────────────────   ───────────────────   ─────────────
+  ECU kirim data ────────→ Bus LOW ──────────→  CTS LOW → BUSY!
+  [ESP32 tunda TX]                              waitCTSClear(50ms)
+  [Tunggu bus idle] ←──── Bus HIGH (idle) ────← CTS HIGH = OK
+  [TX kirim data]   ─────────────────────────→  ECU menerima
 ```
 
 ---
@@ -354,9 +389,13 @@ pio run --target uploadfs
 | GPIO | Fungsi | Keterangan |
 |---|---|---|
 | `GPIO 16` | K-Line RX | Serial2 RX, via voltage divider 5V→3.3V |
-| `GPIO 17` | K-Line TX | Serial2 TX, via 4N25 optocoupler |
+| `GPIO 17` | K-Line TX | Serial2 TX, via 4N35 #1 optocoupler |
+| `GPIO 18` | DTR — TX Enable Gate | Output: aktifkan/nonaktifkan jalur TX secara hardware |
+| `GPIO 19` | CTS — Bus Busy Detect | Input: deteksi K-Line bus busy / collision |
 | `GPIO 34` | Voltage Monitor | ADC input, via voltage divider |
 | `GPIO 2` | Status LED | Built-in LED |
+
+> 💡 GPIO 18 (DTR) dan GPIO 19 (CTS) dapat dinonaktifkan dengan set `-1` di Settings jika tidak menggunakan optocoupler kedua.
 
 ---
 

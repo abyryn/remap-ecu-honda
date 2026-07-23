@@ -18,6 +18,11 @@ void SettingsManager::_applyDefaults() {
     _cfg.uartBaud      = KLINE_BAUD;
     _cfg.autoReconnect = true;
     _cfg.timeoutMs     = KLINE_TIMEOUT_MS;
+    // CTS/DTR: ambil dari config.h, bisa di-override via Settings
+    _cfg.dtrPin        = KLINE_DTR_PIN;
+    _cfg.ctsPin        = KLINE_CTS_PIN;
+    _cfg.useDTR        = (KLINE_DTR_PIN >= 0);
+    _cfg.useCTS        = (KLINE_CTS_PIN >= 0);
     _cfg.darkMode      = true;
     _cfg.language      = "id";
     _cfg.authUsername  = AUTH_USERNAME;
@@ -31,7 +36,7 @@ bool SettingsManager::load() {
     }
 
     String json = FS_Mgr.readText(CONFIG_FILE);
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<640> doc;
     DeserializationError err = deserializeJson(doc, json);
     if (err) {
         Serial.printf("[Settings] Parse error: %s\n", err.c_str());
@@ -43,6 +48,11 @@ bool SettingsManager::load() {
     if (doc.containsKey("uartBaud"))      _cfg.uartBaud      = doc["uartBaud"].as<uint32_t>();
     if (doc.containsKey("autoReconnect")) _cfg.autoReconnect = doc["autoReconnect"].as<bool>();
     if (doc.containsKey("timeoutMs"))     _cfg.timeoutMs     = doc["timeoutMs"].as<uint32_t>();
+    // CTS/DTR
+    if (doc.containsKey("dtrPin"))        _cfg.dtrPin        = doc["dtrPin"].as<int8_t>();
+    if (doc.containsKey("ctsPin"))        _cfg.ctsPin        = doc["ctsPin"].as<int8_t>();
+    if (doc.containsKey("useDTR"))        _cfg.useDTR        = doc["useDTR"].as<bool>();
+    if (doc.containsKey("useCTS"))        _cfg.useCTS        = doc["useCTS"].as<bool>();
     if (doc.containsKey("darkMode"))      _cfg.darkMode      = doc["darkMode"].as<bool>();
     if (doc.containsKey("language"))      _cfg.language      = doc["language"].as<String>();
     if (doc.containsKey("authUsername"))  _cfg.authUsername  = doc["authUsername"].as<String>();
@@ -53,12 +63,17 @@ bool SettingsManager::load() {
 }
 
 bool SettingsManager::save() {
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<640> doc;
     doc["wifiSSID"]      = _cfg.wifiSSID;
     doc["wifiPassword"]  = _cfg.wifiPassword;
     doc["uartBaud"]      = _cfg.uartBaud;
     doc["autoReconnect"] = _cfg.autoReconnect;
     doc["timeoutMs"]     = _cfg.timeoutMs;
+    // CTS/DTR
+    doc["dtrPin"]        = _cfg.dtrPin;
+    doc["ctsPin"]        = _cfg.ctsPin;
+    doc["useDTR"]        = _cfg.useDTR;
+    doc["useCTS"]        = _cfg.useCTS;
     doc["darkMode"]      = _cfg.darkMode;
     doc["language"]      = _cfg.language;
     doc["authUsername"]  = _cfg.authUsername;
@@ -94,6 +109,11 @@ bool SettingsManager::updateFromJson(const String& json) {
     if (doc.containsKey("uartBaud"))      { _cfg.uartBaud      = doc["uartBaud"];      changed = true; }
     if (doc.containsKey("autoReconnect")) { _cfg.autoReconnect = doc["autoReconnect"]; changed = true; }
     if (doc.containsKey("timeoutMs"))     { _cfg.timeoutMs     = doc["timeoutMs"];     changed = true; }
+    // CTS/DTR
+    if (doc.containsKey("dtrPin"))        { _cfg.dtrPin        = (int8_t)doc["dtrPin"].as<int>(); changed = true; }
+    if (doc.containsKey("ctsPin"))        { _cfg.ctsPin        = (int8_t)doc["ctsPin"].as<int>(); changed = true; }
+    if (doc.containsKey("useDTR"))        { _cfg.useDTR        = doc["useDTR"];        changed = true; }
+    if (doc.containsKey("useCTS"))        { _cfg.useCTS        = doc["useCTS"];        changed = true; }
     if (doc.containsKey("darkMode"))      { _cfg.darkMode      = doc["darkMode"];      changed = true; }
 
     if (changed) save();
@@ -101,12 +121,17 @@ bool SettingsManager::updateFromJson(const String& json) {
 }
 
 String SettingsManager::toJson() {
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<640> doc;
     doc["wifiSSID"]      = _cfg.wifiSSID;
     doc["wifiPassword"]  = "********";   // Never expose password
     doc["uartBaud"]      = _cfg.uartBaud;
     doc["autoReconnect"] = _cfg.autoReconnect;
     doc["timeoutMs"]     = _cfg.timeoutMs;
+    // CTS/DTR
+    doc["dtrPin"]        = _cfg.dtrPin;
+    doc["ctsPin"]        = _cfg.ctsPin;
+    doc["useDTR"]        = _cfg.useDTR;
+    doc["useCTS"]        = _cfg.useCTS;
     doc["darkMode"]      = _cfg.darkMode;
     doc["language"]      = _cfg.language;
     doc["authUsername"]  = _cfg.authUsername;

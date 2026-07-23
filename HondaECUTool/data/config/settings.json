@@ -1,0 +1,14 @@
+{
+  "wifiSSID": "Honda ECU Tool",
+  "wifiPassword": "********",
+  "uartBaud": 10400,
+  "autoReconnect": true,
+  "timeoutMs": 1000,
+  "dtrPin": 18,
+  "ctsPin": 19,
+  "useDTR": true,
+  "useCTS": true,
+  "darkMode": true,
+  "language": "id",
+  "authUsername": "admin"
+}

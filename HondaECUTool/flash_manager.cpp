@@ -10,7 +10,9 @@
 #include "include/security.h"
 #include "include/backup.h"
 #include "include/filesystem.h"
+#include "include/settings.h"
 #include "include/utils.h"
+
 #include <ArduinoJson.h>
 #include <esp_task_wdt.h>
 
@@ -237,8 +239,11 @@ FlashResult FlashManager::startRecovery(FlashProgressCB cb) {
         ECU.disconnect();
         delay(RECOVERY_DELAY_MS);
 
-        KLine.begin(KLINE_TX_PIN, KLINE_RX_PIN, KLINE_BAUD);
+        int8_t dtrPin = Settings.get().useDTR ? Settings.get().dtrPin : -1;
+        int8_t ctsPin = Settings.get().useCTS ? Settings.get().ctsPin : -1;
+        KLine.begin(KLINE_TX_PIN, KLINE_RX_PIN, KLINE_BAUD, false, dtrPin, ctsPin);
         delay(500);
+
 
         // Step 2: Try to reconnect
         if (ECU.connect()) {
