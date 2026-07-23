@@ -1,7 +1,7 @@
 #pragma once
 // ============================================================
 // kline.h - Honda K-Line Driver (ISO 9141 / KWP2000 subset)
-// Hardware: ESP32 UART2 via 4N25 optocoupler
+// Hardware: ESP32 UART2 via 4N25 / 4N35 optocoupler or L9637D
 // ============================================================
 #include <Arduino.h>
 #include <HardwareSerial.h>
@@ -76,7 +76,7 @@ public:
     static uint8_t calcChecksum(const uint8_t* data, size_t len);
 
     /**
-     * @brief Validate checksum of received frame
+     * @brief Validate checksum of received frame (supports sum mod 256 and Honda 2's complement)
      */
     static bool validateChecksum(const uint8_t* data, size_t len);
 
@@ -101,7 +101,8 @@ private:
     KLineResult _fastInit();
     KLineResult _5baudInit();
     void        _bitBangByte(uint8_t byte, uint32_t baud);
-    void        _drainEcho(size_t echoLen, uint32_t timeoutMs = 100);
+    void        _drainEcho(const uint8_t* sentData, size_t len, uint32_t timeoutMs = 50);
+    void        _driveLine(bool lineHigh);
     void        _flush();
 };
 

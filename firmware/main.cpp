@@ -108,8 +108,8 @@ void setup() {
 
 // ============================================================
 void loop() {
-    // Feed watchdog
-    esp_task_wdt_reset();
+    // Bluetooth Serial command processor & monitor update
+    Logger.update();
 
     // LED status indicator
     updateLED();

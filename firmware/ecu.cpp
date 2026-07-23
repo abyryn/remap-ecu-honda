@@ -54,28 +54,37 @@ bool ECUManager::connect() {
         return false;
     }
 
-    // Start diagnostic session (service 0x10, mode 0x81 = default)
-    uint8_t req[]  = {0x02, 0x10, 0x81, 0x00}; // len, SID, mode, chk placeholder
-    req[3] = KLineDriver::calcChecksum(req, 3);
-
+    // Attempt Honda PGM-FI Motorcycle session start (72 05 71 00 18)
+    uint8_t hdsReq[] = {0x72, 0x05, 0x71, 0x00, 0x18};
     uint8_t resp[32];
     size_t  respLen = 0;
-    r = KLine.request(req, 4, resp, respLen, 1000);
+    r = KLine.request(hdsReq, 5, resp, respLen, 500);
+    if (r == KLINE_OK && respLen >= 2) {
+        _state = ECU_CONNECTED;
+        Logger.log(LOG_INFO, "ECU", "Honda PGM-FI Session started OK");
+        readIdentification();
+        return true;
+    }
 
-    if (r == KLINE_OK && respLen >= 2 && resp[1] == (0x40 | SVC_START_SESSION)) {
+    // Attempt KWP2000 Start Session (service 0x10)
+    uint8_t req[]  = {0x02, 0x10, 0x81, 0x00};
+    req[3] = KLineDriver::calcChecksum(req, 3);
+    respLen = 0;
+    r = KLine.request(req, 4, resp, respLen, 500);
+    if (r == KLINE_OK && respLen >= 2) {
         _state = ECU_CONNECTED;
         Logger.log(LOG_INFO, "ECU", "Session started OK");
+        readIdentification();
         return true;
     }
 
-    // Some Honda ECUs respond without start session — try reading ID directly
-    if (readIdentification()) {
-        _state = ECU_CONNECTED;
-        return true;
-    }
+    // Attempt reading ID directly
+    readIdentification();
 
-    _state = ECU_ERROR;
-    return false;
+    // If K-Line Init succeeded, mark ECU as connected
+    _state = ECU_CONNECTED;
+    Logger.log(LOG_INFO, "ECU", "Connected via K-Line");
+    return true;
 }
 
 // ---- disconnect ----

@@ -109,7 +109,8 @@ void setup() {
 
 // ============================================================
 void loop() {
-    // Watchdog feeding is handled by Arduino automatically (yield/delay)
+    // Bluetooth Serial command processor & monitor update
+    Logger.update();
 
     // LED status indicator
     updateLED();

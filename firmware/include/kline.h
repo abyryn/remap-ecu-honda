@@ -1,7 +1,7 @@
 #pragma once
 // ============================================================
 // kline.h - Honda K-Line Driver (ISO 9141 / KWP2000 subset)
-// Hardware: ESP32 UART2 via 4N25 optocoupler
+// Hardware: ESP32 UART2 via 4N25 / 4N35 optocoupler or L9637D
 // ============================================================
 #include <Arduino.h>
 #include <HardwareSerial.h>
@@ -39,11 +39,12 @@ public:
 
     /**
      * @brief Initialize UART and optocoupler interface
-     * @param txPin  TX GPIO pin
-     * @param rxPin  RX GPIO pin
-     * @param baud   Baud rate (default 10400)
+     * @param txPin   TX GPIO pin
+     * @param rxPin   RX GPIO pin
+     * @param baud    Baud rate (default 10400)
+     * @param invert  Invert UART signal polarity for inverting optocoupler circuits (default false)
      */
-    void begin(uint8_t txPin, uint8_t rxPin, uint32_t baud = 10400);
+    void begin(uint8_t txPin, uint8_t rxPin, uint32_t baud = 10400, bool invert = false);
 
     /**
      * @brief Perform K-Line initialization sequence
@@ -75,12 +76,16 @@ public:
     static uint8_t calcChecksum(const uint8_t* data, size_t len);
 
     /**
-     * @brief Validate checksum of received frame
+     * @brief Validate checksum of received frame (supports sum mod 256 and Honda 2's complement)
      */
     static bool validateChecksum(const uint8_t* data, size_t len);
 
     bool     isInitialized() const { return _initialized; }
     void     setRetryCount(uint8_t n) { _retryMax = n; }
+    void     setInvert(bool inv) { _invert = inv; }
+    bool     getInvert() const { return _invert; }
+    void     setEchoCancel(bool enable) { _echoCancel = enable; }
+    bool     getEchoCancel() const { return _echoCancel; }
     void     end();
 
 private:
@@ -88,12 +93,16 @@ private:
     uint8_t   _txPin;
     uint8_t   _rxPin;
     uint32_t  _baud;
+    bool      _invert;
+    bool      _echoCancel;
     bool      _initialized;
     uint8_t   _retryMax;
 
     KLineResult _fastInit();
     KLineResult _5baudInit();
     void        _bitBangByte(uint8_t byte, uint32_t baud);
+    void        _drainEcho(const uint8_t* sentData, size_t len, uint32_t timeoutMs = 50);
+    void        _driveLine(bool lineHigh);
     void        _flush();
 };
 

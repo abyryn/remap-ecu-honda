@@ -10,6 +10,9 @@
 #define FW_BUILD_DATE    __DATE__
 #define DEVICE_NAME      "Honda ECU Remapper"
 
+// --- Features ---
+#define ENABLE_BLUETOOTH 1   // Set to 1 if Partition Scheme is Huge APP/No OTA (3MB). Set to 0 if Default 4MB (1.3MB APP).
+
 // --- WiFi ---
 #define WIFI_SSID        "Honda ECU Tool"
 #define WIFI_PASSWORD    "12345678"
