@@ -3,7 +3,6 @@
 // Protocol: Honda Proprietary over K-Line (KWP2000-like)
 // ============================================================
 #include "include/ecu.h"
-#include "include/config.h"
 #include "include/kline.h"
 #include "include/logger.h"
 #include <ArduinoJson.h>

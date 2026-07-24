@@ -2,8 +2,6 @@
 // api.cpp - REST API Implementation
 // ============================================================
 #include "include/api.h"
-#include "include/settings.h"
-#include "include/utils.h"
 #include "include/ecu.h"
 #include "include/kline.h"
 #include "include/logger.h"
@@ -280,7 +278,7 @@ void APIHandler::registerRoutes(AsyncWebServer& server) {
 // GET Handlers
 // ============================================================
 void APIHandler::handleStatus(AsyncWebServerRequest* req) {
-    StaticJsonDocument<640> doc;
+    StaticJsonDocument<512> doc;
     doc["device"]      = DEVICE_NAME;
     doc["version"]     = FW_VERSION;
     doc["uptime"]      = millis();
@@ -294,17 +292,6 @@ void APIHandler::handleStatus(AsyncWebServerRequest* req) {
     doc["fsTotal"] = fsTotal;
     doc["fsUsed"]  = fsUsed;
     doc["cpuTemp"] = Utils::cpuTemperature();
-
-    // --- CTS / DTR Flow Control Status ---
-    JsonObject flowCtrl = doc.createNestedObject("flowControl");
-    flowCtrl["dtrEnabled"]     = KLine.hasDTR();
-    flowCtrl["ctsEnabled"]     = KLine.hasCTS();
-    flowCtrl["dtrPin"]         = KLine.hasDTR() ? (int)Settings.get().dtrPin : -1;
-    flowCtrl["ctsPin"]         = KLine.hasCTS() ? (int)Settings.get().ctsPin : -1;
-    flowCtrl["ctsBusy"]        = KLine.hasCTS() ? KLine.isCTSBusy() : false;
-    flowCtrl["ctsState"]       = KLine.hasCTS() ? (KLine.isCTSBusy() ? "busy" : "idle") : "disabled";
-    flowCtrl["busBusyCount"]   = KLine.getBusBusyCount();
-    flowCtrl["collisionCount"] = KLine.getCollisionCount();
 
     String out;
     serializeJson(doc, out);

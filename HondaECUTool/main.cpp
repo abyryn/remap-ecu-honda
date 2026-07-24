@@ -51,9 +51,8 @@ void setup() {
     digitalWrite(LED_PIN, HIGH);
 
     // --- Watchdog ---
-    // Completely disable TWDT because LittleFS format locks the flash cache and starves both CPU cores.
-#include <esp_task_wdt.h>
-    esp_task_wdt_deinit();
+    esp_task_wdt_init(WDT_TIMEOUT_SEC, true);
+    esp_task_wdt_add(nullptr);
 
     // --- Logger ---
     Logger.begin(LOG_DEBUG);
@@ -80,12 +79,14 @@ void setup() {
     WiFiAP.startMDNS("honda-ecu");
 
     // --- K-Line UART ---
-    // Pass pin DTR/CTS dari Settings (useDTR/useCTS sebagai flag enable)
-    int8_t dtrPin = Settings.get().useDTR ? Settings.get().dtrPin : -1;
-    int8_t ctsPin = Settings.get().useCTS ? Settings.get().ctsPin : -1;
-    KLine.begin(KLINE_TX_PIN, KLINE_RX_PIN, Settings.get().uartBaud,
-                false, dtrPin, ctsPin);
-
+    // invertKLine must be TRUE for optocoupler circuits (4N35/4N25)
+    // invertKLine must be FALSE for IC transceiver (L9637D/MC33290)
+    KLine.begin(KLINE_TX_PIN, KLINE_RX_PIN, Settings.get().uartBaud, Settings.get().invertKLine);
+    KLine.setEchoCancel(Settings.get().echoCancel);
+    Logger.log(LOG_INFO, "Main", "K-Line: baud=%d invert=%s echo=%s",
+               Settings.get().uartBaud,
+               Settings.get().invertKLine ? "YES" : "NO",
+               Settings.get().echoCancel ? "YES" : "NO");
 
     // --- Web Server + WebSocket ---
     WebSrv.begin();

@@ -14,31 +14,28 @@
 WebServerManager WebSrv;
 
 WebServerManager::WebServerManager()
-    : _server(nullptr), _ws(nullptr), _lastBroadcast(0) {}
+    : _server(HTTP_PORT), _ws(WS_PATH), _lastBroadcast(0) {}
 
 // ============================================================
 void WebServerManager::begin() {
-    _server = new AsyncWebServer(HTTP_PORT);
-    _ws = new AsyncWebSocket(WS_PATH);
-
     // --- WebSocket event ---
-    _ws->onEvent([this](AsyncWebSocket* s, AsyncWebSocketClient* c,
+    _ws.onEvent([this](AsyncWebSocket* s, AsyncWebSocketClient* c,
                         AwsEventType t, void* a, uint8_t* d, size_t l) {
         _onWsEvent(s, c, t, a, d, l);
     });
-    _server->addHandler(_ws);
+    _server.addHandler(&_ws);
 
     // --- CORS headers ---
     _setupCORS();
 
     // --- Register REST API routes ---
-    API.registerRoutes(*_server);
+    API.registerRoutes(_server);
 
     // --- Static files from LittleFS ---
     _serveStaticFiles();
 
     // --- 404 fallback ---
-    _server->onNotFound([](AsyncWebServerRequest* req) {
+    _server.onNotFound([](AsyncWebServerRequest* req) {
         if (req->method() == HTTP_OPTIONS) {
             req->send(200);
             return;
@@ -46,13 +43,13 @@ void WebServerManager::begin() {
         req->send(404, "text/plain", "Not Found");
     });
 
-    _server->begin();
+    _server.begin();
     Logger.log(LOG_INFO, "WebSrv", "Server started on port %d", HTTP_PORT);
 }
 
 // ============================================================
 void WebServerManager::loop() {
-    if (_ws) _ws->cleanupClients();
+    _ws.cleanupClients();
 
     // Broadcast live data at configured interval
     if (ECU.isConnected() &&
@@ -84,8 +81,8 @@ void WebServerManager::loop() {
 
 // ============================================================
 void WebServerManager::broadcastWS(const String& json) {
-    if (_ws && _ws->count() > 0) {
-        _ws->textAll(json);
+    if (_ws.count() > 0) {
+        _ws.textAll(json);
     }
 }
 
@@ -172,12 +169,12 @@ void WebServerManager::_handleWsMessage(AsyncWebSocketClient* client,
 // ============================================================
 void WebServerManager::_serveStaticFiles() {
     // Serve all HTML pages
-    _server->serveStatic("/", LittleFS, "/web/").setDefaultFile("index.html");
-    _server->serveStatic("/css/", LittleFS, "/web/css/");
-    _server->serveStatic("/js/",  LittleFS, "/web/js/");
+    _server.serveStatic("/", LittleFS, "/web/").setDefaultFile("index.html");
+    _server.serveStatic("/css/", LittleFS, "/web/css/");
+    _server.serveStatic("/js/",  LittleFS, "/web/js/");
 
     // Serve backup BIN file downloads
-    _server->on("/download", HTTP_GET, [](AsyncWebServerRequest* req) {
+    _server.on("/download", HTTP_GET, [](AsyncWebServerRequest* req) {
         if (!req->hasParam("file")) {
             req->send(400, "text/plain", "file param required");
             return;

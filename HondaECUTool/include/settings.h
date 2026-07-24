@@ -13,11 +13,8 @@ struct AppSettings {
     uint32_t uartBaud;
     bool     autoReconnect;
     uint32_t timeoutMs;
-    // K-Line Flow Control (4N35 CTS/DTR)
-    int8_t   dtrPin;        // GPIO pin DTR (TX Enable Gate), -1 = nonaktif
-    int8_t   ctsPin;        // GPIO pin CTS (Bus Busy Detect), -1 = nonaktif
-    bool     useDTR;        // Aktifkan fitur DTR gate
-    bool     useCTS;        // Aktifkan fitur CTS bus-busy detection
+    bool     invertKLine;    // true for optocoupler (4N25/4N35), false for L9637D
+    bool     echoCancel;     // true for single-wire K-Line echo cancellation
     // UI
     bool    darkMode;
     String  language;
@@ -25,7 +22,6 @@ struct AppSettings {
     String  authUsername;
     String  authPassword;
 };
-
 
 class SettingsManager {
 public:

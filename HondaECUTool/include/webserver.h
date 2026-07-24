@@ -29,11 +29,11 @@ public:
      */
     void broadcastProgress(const String& type, int pct, const String& msg = "");
 
-    AsyncWebServer& server() { return *_server; }
+    AsyncWebServer& server() { return _server; }
 
 private:
-    AsyncWebServer* _server;
-    AsyncWebSocket* _ws;
+    AsyncWebServer _server;
+    AsyncWebSocket _ws;
     uint32_t       _lastBroadcast;
 
     void _onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,

@@ -2,7 +2,6 @@
 // backup.cpp - EEPROM / Flash Backup Utility
 // ============================================================
 #include "include/backup.h"
-#include "include/config.h"
 #include "include/ecu.h"
 #include "include/filesystem.h"
 #include "include/logger.h"

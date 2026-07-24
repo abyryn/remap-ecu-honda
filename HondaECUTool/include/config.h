@@ -11,7 +11,7 @@
 #define DEVICE_NAME      "Honda ECU Remapper"
 
 // --- Features ---
-#define ENABLE_BLUETOOTH 0   // Set to 1 if Partition Scheme is Huge APP/No OTA (3MB). Set to 0 if Default 4MB (1.3MB APP).
+#define ENABLE_BLUETOOTH 1   // Set to 1 if Partition Scheme is Huge APP/No OTA (3MB). Set to 0 if Default 4MB (1.3MB APP).
 
 // --- WiFi ---
 #define WIFI_SSID        "Honda ECU Tool"
@@ -33,17 +33,6 @@
 #define KLINE_BAUD       10400
 #define KLINE_TIMEOUT_MS 1000
 #define KLINE_RETRY_MAX  3
-
-// --- K-Line Flow Control (4N35 CTS/DTR) ---
-// DTR: ESP32 output → aktifkan/nonaktifkan gerbang TX optocoupler
-// CTS: ESP32 input  ← deteksi bus busy / collision detect dari K-Line
-// Set ke -1 untuk menonaktifkan fitur (backward compatible)
-#define KLINE_DTR_PIN    18     // GPIO18: TX Enable Gate (DTR out)
-#define KLINE_CTS_PIN    19     // GPIO19: Bus Busy Detect (CTS in)
-#define KLINE_DTR_ACTIVE HIGH   // Level saat DTR aktif (enable TX gate)
-#define KLINE_CTS_BUSY   LOW    // Level CTS saat K-Line bus sedang busy
-#define KLINE_CTS_TIMEOUT_MS 50 // Timeout tunggu bus idle (ms)
-#define KLINE_DTR_SETTLE_US  50 // Delay setelah DTR aktif sebelum TX (us)
 
 // --- Voltage Monitor ---
 #define VBAT_PIN         34

@@ -12,7 +12,6 @@
 #include "include/filesystem.h"
 #include "include/settings.h"
 #include "include/utils.h"
-
 #include <ArduinoJson.h>
 #include <esp_task_wdt.h>
 
@@ -239,11 +238,9 @@ FlashResult FlashManager::startRecovery(FlashProgressCB cb) {
         ECU.disconnect();
         delay(RECOVERY_DELAY_MS);
 
-        int8_t dtrPin = Settings.get().useDTR ? Settings.get().dtrPin : -1;
-        int8_t ctsPin = Settings.get().useCTS ? Settings.get().ctsPin : -1;
-        KLine.begin(KLINE_TX_PIN, KLINE_RX_PIN, KLINE_BAUD, false, dtrPin, ctsPin);
+        KLine.begin(KLINE_TX_PIN, KLINE_RX_PIN, KLINE_BAUD, Settings.get().invertKLine);
+        KLine.setEchoCancel(Settings.get().echoCancel);
         delay(500);
-
 
         // Step 2: Try to reconnect
         if (ECU.connect()) {
@@ -406,7 +403,7 @@ FlashResult FlashManager::_readBlocks(uint32_t startAddr, size_t size,
 
         esp_task_wdt_reset();  // Feed watchdog
 
-        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, (size_t)(size - blocksDone * FLASH_BLOCK_SIZE));
+        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, size - blocksDone * FLASH_BLOCK_SIZE);
 
         // Build read request
         uint8_t req[8];
@@ -518,7 +515,7 @@ FlashResult FlashManager::_writeBlocks(const uint8_t* data, uint32_t startAddr, 
 
         esp_task_wdt_reset();
 
-        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, (size_t)(size - blocksDone * FLASH_BLOCK_SIZE));
+        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, size - blocksDone * FLASH_BLOCK_SIZE);
 
         // Build write request
         uint8_t req[FLASH_BLOCK_SIZE + 8];
@@ -625,7 +622,7 @@ FlashResult FlashManager::_verifyBlocks(const uint8_t* expected, size_t size, Fl
     for (uint32_t b = 0; b < totalBlocks; b++) {
         esp_task_wdt_reset();
 
-        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, (size_t)(size - b * FLASH_BLOCK_SIZE));
+        size_t chunkSize = min((size_t)FLASH_BLOCK_SIZE, size - b * FLASH_BLOCK_SIZE);
 
         uint8_t req[8];
         req[0] = 0x05;
