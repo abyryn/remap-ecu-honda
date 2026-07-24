@@ -79,7 +79,14 @@ void setup() {
     WiFiAP.startMDNS("honda-ecu");
 
     // --- K-Line UART ---
-    KLine.begin(KLINE_TX_PIN, KLINE_RX_PIN, Settings.get().uartBaud);
+    // invertKLine must be TRUE for optocoupler circuits (4N35/4N25)
+    // invertKLine must be FALSE for IC transceiver (L9637D/MC33290)
+    KLine.begin(KLINE_TX_PIN, KLINE_RX_PIN, Settings.get().uartBaud, Settings.get().invertKLine);
+    KLine.setEchoCancel(Settings.get().echoCancel);
+    Logger.log(LOG_INFO, "Main", "K-Line: baud=%d invert=%s echo=%s",
+               Settings.get().uartBaud,
+               Settings.get().invertKLine ? "YES" : "NO",
+               Settings.get().echoCancel ? "YES" : "NO");
 
     // --- Web Server + WebSocket ---
     WebSrv.begin();

@@ -18,6 +18,8 @@ void SettingsManager::_applyDefaults() {
     _cfg.uartBaud      = KLINE_BAUD;
     _cfg.autoReconnect = true;
     _cfg.timeoutMs     = KLINE_TIMEOUT_MS;
+    _cfg.invertKLine   = true;    // Default true for 4N35 optocoupler
+    _cfg.echoCancel    = true;    // Default true for single-wire K-Line
     _cfg.darkMode      = true;
     _cfg.language      = "id";
     _cfg.authUsername  = AUTH_USERNAME;
@@ -43,6 +45,8 @@ bool SettingsManager::load() {
     if (doc.containsKey("uartBaud"))      _cfg.uartBaud      = doc["uartBaud"].as<uint32_t>();
     if (doc.containsKey("autoReconnect")) _cfg.autoReconnect = doc["autoReconnect"].as<bool>();
     if (doc.containsKey("timeoutMs"))     _cfg.timeoutMs     = doc["timeoutMs"].as<uint32_t>();
+    if (doc.containsKey("invertKLine"))   _cfg.invertKLine   = doc["invertKLine"].as<bool>();
+    if (doc.containsKey("echoCancel"))    _cfg.echoCancel    = doc["echoCancel"].as<bool>();
     if (doc.containsKey("darkMode"))      _cfg.darkMode      = doc["darkMode"].as<bool>();
     if (doc.containsKey("language"))      _cfg.language      = doc["language"].as<String>();
     if (doc.containsKey("authUsername"))  _cfg.authUsername  = doc["authUsername"].as<String>();
@@ -59,6 +63,8 @@ bool SettingsManager::save() {
     doc["uartBaud"]      = _cfg.uartBaud;
     doc["autoReconnect"] = _cfg.autoReconnect;
     doc["timeoutMs"]     = _cfg.timeoutMs;
+    doc["invertKLine"]   = _cfg.invertKLine;
+    doc["echoCancel"]    = _cfg.echoCancel;
     doc["darkMode"]      = _cfg.darkMode;
     doc["language"]      = _cfg.language;
     doc["authUsername"]  = _cfg.authUsername;
@@ -94,6 +100,8 @@ bool SettingsManager::updateFromJson(const String& json) {
     if (doc.containsKey("uartBaud"))      { _cfg.uartBaud      = doc["uartBaud"];      changed = true; }
     if (doc.containsKey("autoReconnect")) { _cfg.autoReconnect = doc["autoReconnect"]; changed = true; }
     if (doc.containsKey("timeoutMs"))     { _cfg.timeoutMs     = doc["timeoutMs"];     changed = true; }
+    if (doc.containsKey("invertKLine"))   { _cfg.invertKLine   = doc["invertKLine"];   changed = true; }
+    if (doc.containsKey("echoCancel"))    { _cfg.echoCancel    = doc["echoCancel"];    changed = true; }
     if (doc.containsKey("darkMode"))      { _cfg.darkMode      = doc["darkMode"];      changed = true; }
 
     if (changed) save();
@@ -107,6 +115,8 @@ String SettingsManager::toJson() {
     doc["uartBaud"]      = _cfg.uartBaud;
     doc["autoReconnect"] = _cfg.autoReconnect;
     doc["timeoutMs"]     = _cfg.timeoutMs;
+    doc["invertKLine"]   = _cfg.invertKLine;
+    doc["echoCancel"]    = _cfg.echoCancel;
     doc["darkMode"]      = _cfg.darkMode;
     doc["language"]      = _cfg.language;
     doc["authUsername"]  = _cfg.authUsername;

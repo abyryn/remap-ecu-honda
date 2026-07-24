@@ -13,6 +13,8 @@ struct AppSettings {
     uint32_t uartBaud;
     bool     autoReconnect;
     uint32_t timeoutMs;
+    bool     invertKLine;    // true for optocoupler (4N25/4N35), false for L9637D
+    bool     echoCancel;     // true for single-wire K-Line echo cancellation
     // UI
     bool    darkMode;
     String  language;

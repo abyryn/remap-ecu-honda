@@ -103,6 +103,7 @@ private:
     void        _bitBangByte(uint8_t byte, uint32_t baud);
     void        _drainEcho(const uint8_t* sentData, size_t len, uint32_t timeoutMs = 50);
     void        _driveLine(bool lineHigh);
+    void        _sendFrameSlow(const uint8_t* data, size_t len, uint8_t interByteMs = 5);
     void        _flush();
 };
 
