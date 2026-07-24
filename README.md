@@ -586,8 +586,5 @@ dengan tetap mencantumkan kredit.
 
 <div align="center">
 
-**Honda ECU K-Line Diagnostic Tool** — dibuat dengan ❤️ untuk komunitas otomotif Indonesia
-
-⭐ Jika project ini membantu, jangan lupa kasih star di GitHub!
-
+**Honda ECU K-Line Diagnostic Tool** — Astra Motor 
 </div>
