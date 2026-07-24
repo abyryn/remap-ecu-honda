@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Honda ECU Tool</title>
+  <title>WRT Diagnostic</title>
   <link rel="stylesheet" href="css/main.css">
   <!-- Font Awesome CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -11,369 +12,465 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <!-- Font Awesome sudah ada di atas, hapus duplikat di bawah bila ada -->
 </head>
+
 <body>
 
-<!-- Toast Container -->
-<div id="toast-container"></div>
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
 
-<!-- Sidebar Overlay (mobile) -->
-<div id="sidebar-overlay" class="sidebar-overlay"></div>
+  <!-- Sidebar Overlay (mobile) -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
-<div class="app-layout">
+  <div class="app-layout">
 
-  <!-- ====== SIDEBAR ====== -->
-  <aside class="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-icon">🏍</div>
-      <div class="logo-text">
-        Honda ECU Tool
-        <span>ESP32 K-Line v1.0</span>
-      </div>
-    </div>
-
-    <nav class="sidebar-nav">
-      <div class="nav-section">Main</div>
-      <div class="nav-item active" data-page="dashboard"><i class="fa fa-gauge"></i> Dashboard</div>
-      <div class="nav-item" data-page="vehicle"><i class="fa fa-motorcycle"></i> Vehicle</div>
-
-      <div class="nav-section">Diagnostics</div>
-      <div class="nav-item" data-page="live"><i class="fa fa-chart-line"></i> Live Data</div>
-      <div class="nav-item" data-page="diagnostic">
-        <i class="fa fa-triangle-exclamation"></i> Diagnostic
-        <span class="badge" id="dtc-count-badge">0</span>
+    <!-- ====== SIDEBAR ====== -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">🏍</div>
+        <div class="logo-text">
+          WRT Diagnostic
+          <span>@abiriann.ab</span>
+        </div>
       </div>
 
-      <div class="nav-section">Tuning</div>
-      <div class="nav-item" data-page="mapeditor"><i class="fa fa-table-cells"></i> Map Editor</div>
-      <div class="nav-item" data-page="flash"><i class="fa fa-microchip"></i> Flash ECU</div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Main</div>
+        <div class="nav-item active" data-page="dashboard"><i class="fa fa-gauge"></i> Dashboard</div>
+        <div class="nav-item" data-page="vehicle"><i class="fa fa-motorcycle"></i> Vehicle</div>
 
-      <div class="nav-section">Storage</div>
-      <div class="nav-item" data-page="backup"><i class="fa fa-floppy-disk"></i> Backup</div>
-      <div class="nav-item" data-page="restore"><i class="fa fa-rotate-left"></i> Restore</div>
-      <div class="nav-item" data-page="files"><i class="fa fa-folder-open"></i> File Manager</div>
-
-      <div class="nav-section">Tools</div>
-      <div class="nav-item" data-page="terminal"><i class="fa fa-terminal"></i> Terminal</div>
-      <div class="nav-item" data-page="logger"><i class="fa fa-file-lines"></i> Logs</div>
-
-      <div class="nav-section">System</div>
-      <div class="nav-item" data-page="settings"><i class="fa fa-gear"></i> Settings</div>
-      <div class="nav-item" data-page="about"><i class="fa fa-circle-info"></i> About</div>
-    </nav>
-  </aside>
-
-  <!-- ====== MAIN ====== -->
-  <div class="main-content">
-
-    <!-- Top Bar -->
-    <div class="topbar">
-      <button class="menu-toggle" id="menu-toggle"><i class="fa fa-bars"></i></button>
-      <div class="topbar-title">Dashboard</div>
-
-      <button class="btn btn-primary btn-sm" id="btn-connect">
-        <i class="fa fa-plug"></i> Connect ECU
-      </button>
-      <button class="btn btn-secondary btn-sm" id="btn-disconnect">
-        <i class="fa fa-power-off"></i>
-      </button>
-      <button class="btn btn-secondary btn-sm" id="btn-theme" title="Toggle theme">
-        <i class="fa fa-moon"></i>
-      </button>
-      <a href="mobile.html" class="btn btn-secondary btn-sm" title="Versi Mobile" style="text-decoration:none">
-        <i class="fa fa-mobile-screen"></i>
-      </a>
-    </div>
-
-    <!-- Page Content -->
-    <div class="page-body">
-
-      <!-- ===== DASHBOARD ===== -->
-      <div class="page-section active" id="page-dashboard">
-        <div class="grid grid-4" style="margin-bottom:16px">
-          <div class="card">
-            <div class="card-title"><i class="fa fa-clock"></i> Uptime</div>
-            <div class="metric-value" id="dash-uptime">—</div>
-          </div>
-          <div class="card">
-            <div class="card-title"><i class="fa fa-bolt"></i> Battery</div>
-            <div class="metric-value" id="dash-vbat">— <span class="metric-unit">V</span></div>
-          </div>
-          <div class="card">
-            <div class="card-title"><i class="fa fa-memory"></i> Free Heap</div>
-            <div class="metric-value" id="dash-heap">—</div>
-          </div>
-          <div class="card">
-            <div class="card-title"><i class="fa fa-temperature-half"></i> CPU Temp</div>
-            <div class="metric-value" id="dash-cpu">— <span class="metric-unit">°C</span></div>
-          </div>
+        <div class="nav-section">Diagnostics</div>
+        <div class="nav-item" data-page="live"><i class="fa fa-chart-line"></i> Live Data</div>
+        <div class="nav-item" data-page="diagnostic">
+          <i class="fa fa-triangle-exclamation"></i> Diagnostic
+          <span class="badge" id="dtc-count-badge">0</span>
         </div>
 
-        <div class="grid grid-2">
-          <div class="card">
-            <div class="card-title"><i class="fa fa-car-battery"></i> ECU Status</div>
-            <div style="font-size:24px;font-weight:700;margin-bottom:8px" id="dash-ecu-state">Disconnected</div>
-            <div style="color:var(--text-secondary);font-size:12px">Firmware: <span id="dash-version">—</span></div>
-          </div>
-          <div class="card">
-            <div class="card-title"><i class="fa fa-hard-drive"></i> Storage</div>
-            <div class="progress-bar-wrap" style="margin-bottom:8px">
-              <div class="progress-bar-fill" id="dash-fs-bar" style="width:0%"></div>
+        <div class="nav-section">Tuning</div>
+        <div class="nav-item" data-page="mapeditor"><i class="fa fa-table-cells"></i> Map Editor</div>
+        <div class="nav-item" data-page="flash"><i class="fa fa-microchip"></i> Flash ECU</div>
+
+        <div class="nav-section">Storage</div>
+        <div class="nav-item" data-page="backup"><i class="fa fa-floppy-disk"></i> Backup</div>
+        <div class="nav-item" data-page="restore"><i class="fa fa-rotate-left"></i> Restore</div>
+        <div class="nav-item" data-page="files"><i class="fa fa-folder-open"></i> File Manager</div>
+
+        <div class="nav-section">Tools</div>
+        <div class="nav-item" data-page="terminal"><i class="fa fa-terminal"></i> Terminal</div>
+        <div class="nav-item" data-page="logger"><i class="fa fa-file-lines"></i> Logs</div>
+
+        <div class="nav-section">System</div>
+        <div class="nav-item" data-page="settings"><i class="fa fa-gear"></i> Settings</div>
+        <div class="nav-item" data-page="about"><i class="fa fa-circle-info"></i> About</div>
+      </nav>
+    </aside>
+
+    <!-- ====== MAIN ====== -->
+    <div class="main-content">
+
+      <!-- Top Bar -->
+      <div class="topbar">
+        <button class="menu-toggle" id="menu-toggle"><i class="fa fa-bars"></i></button>
+        <div class="topbar-title">Dashboard</div>
+
+        <button class="btn btn-primary btn-sm" id="btn-connect">
+          <i class="fa fa-plug"></i> Connect ECU
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-disconnect">
+          <i class="fa fa-power-off"></i>
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-theme" title="Toggle theme">
+          <i class="fa fa-moon"></i>
+        </button>
+        <a href="mobile.html" class="btn btn-secondary btn-sm" title="Versi Mobile" style="text-decoration:none">
+          <i class="fa fa-mobile-screen"></i>
+        </a>
+      </div>
+
+      <!-- Page Content -->
+      <div class="page-body">
+
+        <!-- ===== DASHBOARD ===== -->
+        <div class="page-section active" id="page-dashboard">
+          <div class="grid grid-4" style="margin-bottom:16px">
+            <div class="card">
+              <div class="card-title"><i class="fa fa-clock"></i> Uptime</div>
+              <div class="metric-value" id="dash-uptime">—</div>
             </div>
-            <div style="font-size:12px;color:var(--text-secondary)" id="dash-fs-pct">—</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== VEHICLE ===== -->
-      <div class="page-section" id="page-vehicle">
-        <div class="grid grid-2">
-          <div class="card">
-            <div class="card-title"><i class="fa fa-motorcycle"></i> Vehicle Model</div>
-            <div class="form-group">
-              <label class="form-label">Select Model</label>
-              <select class="form-control" id="set-model"></select>
+            <div class="card">
+              <div class="card-title"><i class="fa fa-bolt"></i> Battery</div>
+              <div class="metric-value" id="dash-vbat">— <span class="metric-unit">V</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title"><i class="fa fa-memory"></i> Free Heap</div>
+              <div class="metric-value" id="dash-heap">—</div>
+            </div>
+            <div class="card">
+              <div class="card-title"><i class="fa fa-temperature-half"></i> CPU Temp</div>
+              <div class="metric-value" id="dash-cpu">— <span class="metric-unit">°C</span></div>
             </div>
           </div>
-          <div class="card">
-            <div class="card-title"><i class="fa fa-microchip"></i> ECU Information</div>
-            <table>
-              <tr><td>Manufacturer</td><td id="ecu-mfr">—</td></tr>
-              <tr><td>Part Number</td><td id="ecu-part">—</td></tr>
-              <tr><td>FW Version</td><td id="ecu-fw">—</td></tr>
-              <tr><td>HW Version</td><td id="ecu-hw">—</td></tr>
-              <tr><td>Protocol</td><td id="ecu-proto">—</td></tr>
-              <tr><td>EEPROM Size</td><td id="ecu-eeprom">—</td></tr>
-              <tr><td>Checksum</td><td id="ecu-chk">—</td></tr>
-            </table>
-            <button class="btn btn-primary btn-sm" style="margin-top:12px" id="btn-read-ecu-id">
-              <i class="fa fa-id-card"></i> Read ECU ID
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <!-- ===== LIVE DATA ===== -->
-      <div class="page-section" id="page-live">
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <button class="btn btn-secondary btn-sm" id="btn-live-pause">⏸ Pause</button>
-          <button class="btn btn-secondary btn-sm" id="btn-live-clear">🗑 Clear</button>
-          <button class="btn btn-secondary btn-sm" id="btn-live-export">⬇ Export CSV</button>
-        </div>
-
-        <!-- Chart -->
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-title"><i class="fa fa-chart-area"></i> Realtime Chart</div>
-          <div style="height:220px;position:relative">
-            <canvas id="live-chart"></canvas>
-          </div>
-        </div>
-
-        <!-- PIDs grid -->
-        <div class="grid grid-auto">
-          <div class="card"><div class="card-title">RPM</div><div class="metric-value" id="live-rpm">0</div></div>
-          <div class="card"><div class="card-title">TPS</div><div class="metric-value" id="live-tps">0 <span class="metric-unit">%</span></div></div>
-          <div class="card"><div class="card-title">MAP</div><div class="metric-value" id="live-map">0 <span class="metric-unit">kPa</span></div></div>
-          <div class="card"><div class="card-title">IAT</div><div class="metric-value" id="live-iat">0 <span class="metric-unit">°C</span></div></div>
-          <div class="card"><div class="card-title">ECT</div><div class="metric-value" id="live-ect">0 <span class="metric-unit">°C</span></div></div>
-          <div class="card"><div class="card-title">Battery</div><div class="metric-value" id="live-vbat">0 <span class="metric-unit">V</span></div></div>
-          <div class="card"><div class="card-title">Inj PW</div><div class="metric-value" id="live-inj">0 <span class="metric-unit">ms</span></div></div>
-          <div class="card"><div class="card-title">Ign Timing</div><div class="metric-value" id="live-ign">0 <span class="metric-unit">°</span></div></div>
-          <div class="card"><div class="card-title">Speed</div><div class="metric-value" id="live-speed">0 <span class="metric-unit">km/h</span></div></div>
-          <div class="card"><div class="card-title">Engine Load</div><div class="metric-value" id="live-load">0 <span class="metric-unit">%</span></div></div>
-          <div class="card"><div class="card-title">O2 Sensor</div><div class="metric-value" id="live-o2">0 <span class="metric-unit">mV</span></div></div>
-          <div class="card"><div class="card-title">Fuel Trim</div><div class="metric-value" id="live-ftrim">0 <span class="metric-unit">%</span></div></div>
-          <div class="card"><div class="card-title">Loop Mode</div><div class="metric-value" id="live-loop">—</div></div>
-          <div class="card"><div class="card-title">Idle SW</div><div class="metric-value" id="live-idle">—</div></div>
-        </div>
-      </div>
-
-      <!-- ===== DIAGNOSTIC ===== -->
-      <div class="page-section" id="page-diagnostic">
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <button class="btn btn-primary" id="btn-read-dtc"><i class="fa fa-magnifying-glass"></i> Read DTC</button>
-          <button class="btn btn-danger"  id="btn-clear-dtc"><i class="fa fa-trash"></i> Clear DTC</button>
-        </div>
-        <div class="card">
-          <div class="card-title"><i class="fa fa-triangle-exclamation"></i> Fault Codes</div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Code</th><th>Description</th><th>MIL</th><th>Status</th></tr></thead>
-              <tbody id="dtc-tbody">
-                <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px">Press "Read DTC" to scan</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== BACKUP ===== -->
-      <div class="page-section" id="page-backup">
-        <div class="grid grid-2">
-          <div class="card">
-            <div class="card-title"><i class="fa fa-floppy-disk"></i> Create Backup</div>
-            <p style="color:var(--text-secondary);margin-bottom:12px;font-size:13px">
-              Reads EEPROM from connected ECU and saves as .bin file.
-            </p>
-            <div id="backup-progress-wrap" style="display:none;margin-bottom:12px">
-              <div class="progress-bar-wrap"><div class="progress-bar-fill" id="backup-progress-bar" style="width:0%"></div></div>
-              <div style="font-size:12px;color:var(--text-secondary);margin-top:4px" id="backup-progress-label">0%</div>
+          <div class="grid grid-2">
+            <div class="card">
+              <div class="card-title"><i class="fa fa-car-battery"></i> ECU Status</div>
+              <div style="font-size:24px;font-weight:700;margin-bottom:8px" id="dash-ecu-state">Disconnected</div>
+              <div style="color:var(--text-secondary);font-size:12px">Firmware: <span id="dash-version">—</span></div>
             </div>
-            <button class="btn btn-primary" id="btn-start-backup">
-              <i class="fa fa-floppy-disk"></i> Start Backup
-            </button>
+            <div class="card">
+              <div class="card-title"><i class="fa fa-hard-drive"></i> Storage</div>
+              <div class="progress-bar-wrap" style="margin-bottom:8px">
+                <div class="progress-bar-fill" id="dash-fs-bar" style="width:0%"></div>
+              </div>
+              <div style="font-size:12px;color:var(--text-secondary)" id="dash-fs-pct">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== VEHICLE ===== -->
+        <div class="page-section" id="page-vehicle">
+          <div class="grid grid-2">
+            <div class="card">
+              <div class="card-title"><i class="fa fa-motorcycle"></i> Vehicle Model</div>
+              <div class="form-group">
+                <label class="form-label">Select Model</label>
+                <select class="form-control" id="set-model"></select>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title"><i class="fa fa-microchip"></i> ECU Information</div>
+              <table>
+                <tr>
+                  <td>Manufacturer</td>
+                  <td id="ecu-mfr">—</td>
+                </tr>
+                <tr>
+                  <td>Part Number</td>
+                  <td id="ecu-part">—</td>
+                </tr>
+                <tr>
+                  <td>FW Version</td>
+                  <td id="ecu-fw">—</td>
+                </tr>
+                <tr>
+                  <td>HW Version</td>
+                  <td id="ecu-hw">—</td>
+                </tr>
+                <tr>
+                  <td>Protocol</td>
+                  <td id="ecu-proto">—</td>
+                </tr>
+                <tr>
+                  <td>EEPROM Size</td>
+                  <td id="ecu-eeprom">—</td>
+                </tr>
+                <tr>
+                  <td>Checksum</td>
+                  <td id="ecu-chk">—</td>
+                </tr>
+              </table>
+              <button class="btn btn-primary btn-sm" style="margin-top:12px" id="btn-read-ecu-id">
+                <i class="fa fa-id-card"></i> Read ECU ID
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== LIVE DATA ===== -->
+        <div class="page-section" id="page-live">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm" id="btn-live-pause">⏸ Pause</button>
+            <button class="btn btn-secondary btn-sm" id="btn-live-clear">🗑 Clear</button>
+            <button class="btn btn-secondary btn-sm" id="btn-live-export">⬇ Export CSV</button>
+          </div>
+
+          <!-- Chart -->
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title"><i class="fa fa-chart-area"></i> Realtime Chart</div>
+            <div style="height:220px;position:relative">
+              <canvas id="live-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- PIDs grid -->
+          <div class="grid grid-auto">
+            <div class="card">
+              <div class="card-title">RPM</div>
+              <div class="metric-value" id="live-rpm">0</div>
+            </div>
+            <div class="card">
+              <div class="card-title">TPS</div>
+              <div class="metric-value" id="live-tps">0 <span class="metric-unit">%</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">MAP</div>
+              <div class="metric-value" id="live-map">0 <span class="metric-unit">kPa</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">IAT</div>
+              <div class="metric-value" id="live-iat">0 <span class="metric-unit">°C</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">ECT</div>
+              <div class="metric-value" id="live-ect">0 <span class="metric-unit">°C</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Battery</div>
+              <div class="metric-value" id="live-vbat">0 <span class="metric-unit">V</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Inj PW</div>
+              <div class="metric-value" id="live-inj">0 <span class="metric-unit">ms</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Ign Timing</div>
+              <div class="metric-value" id="live-ign">0 <span class="metric-unit">°</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Speed</div>
+              <div class="metric-value" id="live-speed">0 <span class="metric-unit">km/h</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Engine Load</div>
+              <div class="metric-value" id="live-load">0 <span class="metric-unit">%</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">O2 Sensor</div>
+              <div class="metric-value" id="live-o2">0 <span class="metric-unit">mV</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Fuel Trim</div>
+              <div class="metric-value" id="live-ftrim">0 <span class="metric-unit">%</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Loop Mode</div>
+              <div class="metric-value" id="live-loop">—</div>
+            </div>
+            <div class="card">
+              <div class="card-title">Idle SW</div>
+              <div class="metric-value" id="live-idle">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== DIAGNOSTIC ===== -->
+        <div class="page-section" id="page-diagnostic">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="btn btn-primary" id="btn-read-dtc"><i class="fa fa-magnifying-glass"></i> Read DTC</button>
+            <button class="btn btn-danger" id="btn-clear-dtc"><i class="fa fa-trash"></i> Clear DTC</button>
           </div>
           <div class="card">
-            <div class="card-title"><i class="fa fa-list"></i> Backup Files</div>
-            <button class="btn btn-secondary btn-sm" id="btn-refresh-backups" style="margin-bottom:12px">
-              <i class="fa fa-rotate"></i> Refresh
-            </button>
-            <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted)">
-              <i class="fa fa-info-circle"></i> View all files in the <b>File Manager</b> page.
-            </div>
+            <div class="card-title"><i class="fa fa-triangle-exclamation"></i> Fault Codes</div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>File</th><th>Date</th><th>Model</th><th>Size</th><th>Action</th></tr></thead>
-                <tbody id="backup-tbody"></tbody>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Description</th>
+                    <th>MIL</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="dtc-tbody">
+                  <tr>
+                    <td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px">Press "Read DTC" to
+                      scan</td>
+                  </tr>
+                </tbody>
               </table>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- ===== RESTORE ===== -->
-      <div class="page-section" id="page-restore">
-        <div class="card" style="max-width:600px">
-          <div class="card-title"><i class="fa fa-rotate-left"></i> Simulate Restore</div>
-          <p style="color:var(--text-secondary);margin-bottom:16px;font-size:13px">
-            Compare a saved .bin against the live ECU EEPROM. No data is written.
-          </p>
-          <div class="form-group">
-            <label class="form-label">Select BIN File</label>
-            <select class="form-control" id="restore-file-select">
-              <option value="">-- Select --</option>
-            </select>
-          </div>
-          <div id="restore-progress-wrap" style="margin-bottom:12px">
-            <div class="progress-bar-wrap"><div class="progress-bar-fill" id="restore-progress-bar" style="width:0%"></div></div>
-            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px" id="restore-progress-label"></div>
-          </div>
-          <button class="btn btn-warning" id="btn-start-restore">
-            <i class="fa fa-code-compare"></i> Simulate Restore
-          </button>
-        </div>
-      </div>
-
-      <!-- ===== MAP EDITOR ===== -->
-      <div class="page-section" id="page-mapeditor" style="height:calc(100vh - 120px)">
-        <div class="map-editor-container">
-          <div class="map-toolbar">
-            <select class="form-control" id="map-select" style="width:250px">
-              <option value="">-- Select Map --</option>
-            </select>
-            <button class="btn btn-secondary btn-sm" id="btn-map-load" disabled><i class="fa fa-download"></i> Load from Flash Buffer</button>
-            <div style="width:1px;height:24px;background:var(--border-color);margin:0 8px"></div>
-            <button class="btn btn-secondary btn-sm" id="btn-map-undo" disabled><i class="fa fa-rotate-left"></i> Undo</button>
-            <button class="btn btn-secondary btn-sm" id="btn-map-redo" disabled><i class="fa fa-rotate-right"></i> Redo</button>
-            <div style="flex:1"></div>
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
-              <input type="checkbox" id="chk-live-cursor"> Live Cursor (RPM/TPS)
-            </label>
-            <button class="btn btn-primary btn-sm" id="btn-map-save" disabled><i class="fa fa-floppy-disk"></i> Apply to Buffer</button>
-          </div>
-
-          <div class="map-table-wrapper" id="map-table-container">
-            <div style="text-align:center;padding:100px;color:var(--text-muted)">
-              <i class="fa fa-table fa-3x" style="margin-bottom:12px"></i>
-              <div>No map loaded.<br>Select a map and click 'Load'. Make sure you have read ECU flash first.</div>
+        <!-- ===== BACKUP ===== -->
+        <div class="page-section" id="page-backup">
+          <div class="grid grid-2">
+            <div class="card">
+              <div class="card-title"><i class="fa fa-floppy-disk"></i> Create Backup</div>
+              <p style="color:var(--text-secondary);margin-bottom:12px;font-size:13px">
+                Reads EEPROM from connected ECU and saves as .bin file.
+              </p>
+              <div id="backup-progress-wrap" style="display:none;margin-bottom:12px">
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar-fill" id="backup-progress-bar" style="width:0%"></div>
+                </div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px" id="backup-progress-label">0%
+                </div>
+              </div>
+              <button class="btn btn-primary" id="btn-start-backup">
+                <i class="fa fa-floppy-disk"></i> Start Backup
+              </button>
             </div>
-          </div>
-          <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between">
-            <span id="map-info-label">Map Size: --</span>
-            <span>Use W/S or +/- to edit values. Shift+Click to select multiple cells.</span>
+            <div class="card">
+              <div class="card-title"><i class="fa fa-list"></i> Backup Files</div>
+              <button class="btn btn-secondary btn-sm" id="btn-refresh-backups" style="margin-bottom:12px">
+                <i class="fa fa-rotate"></i> Refresh
+              </button>
+              <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted)">
+                <i class="fa fa-info-circle"></i> View all files in the <b>File Manager</b> page.
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>File</th>
+                      <th>Date</th>
+                      <th>Model</th>
+                      <th>Size</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="backup-tbody"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- ===== FLASH ECU ===== -->
-      <div class="page-section" id="page-flash">
-        <div class="flash-container">
-          <div class="card" style="margin-bottom:16px">
-            <div class="card-title"><i class="fa fa-download"></i> Read ECU Flash</div>
-            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:12px">
-              Read current calibration data or full flash image from the ECU into the device memory buffer.
+        <!-- ===== RESTORE ===== -->
+        <div class="page-section" id="page-restore">
+          <div class="card" style="max-width:600px">
+            <div class="card-title"><i class="fa fa-rotate-left"></i> Simulate Restore</div>
+            <p style="color:var(--text-secondary);margin-bottom:16px;font-size:13px">
+              Compare a saved .bin against the live ECU EEPROM. No data is written.
             </p>
-            <div style="display:flex;gap:12px">
-              <button class="btn btn-secondary flash-big-btn" id="btn-flash-read-cal">Read Calibration</button>
-              <button class="btn btn-secondary flash-big-btn" id="btn-flash-read-full">Read Full Flash</button>
+            <div class="form-group">
+              <label class="form-label">Select BIN File</label>
+              <select class="form-control" id="restore-file-select">
+                <option value="">-- Select --</option>
+              </select>
+            </div>
+            <div id="restore-progress-wrap" style="margin-bottom:12px">
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" id="restore-progress-bar" style="width:0%"></div>
+              </div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:4px" id="restore-progress-label"></div>
+            </div>
+            <button class="btn btn-warning" id="btn-start-restore">
+              <i class="fa fa-code-compare"></i> Simulate Restore
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== MAP EDITOR ===== -->
+        <div class="page-section" id="page-mapeditor" style="height:calc(100vh - 120px)">
+          <div class="map-editor-container">
+            <div class="map-toolbar">
+              <select class="form-control" id="map-select" style="width:250px">
+                <option value="">-- Select Map --</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" id="btn-map-load" disabled><i class="fa fa-download"></i> Load
+                from Flash Buffer</button>
+              <div style="width:1px;height:24px;background:var(--border-color);margin:0 8px"></div>
+              <button class="btn btn-secondary btn-sm" id="btn-map-undo" disabled><i class="fa fa-rotate-left"></i>
+                Undo</button>
+              <button class="btn btn-secondary btn-sm" id="btn-map-redo" disabled><i class="fa fa-rotate-right"></i>
+                Redo</button>
+              <div style="flex:1"></div>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+                <input type="checkbox" id="chk-live-cursor"> Live Cursor (RPM/TPS)
+              </label>
+              <button class="btn btn-primary btn-sm" id="btn-map-save" disabled><i class="fa fa-floppy-disk"></i> Apply
+                to Buffer</button>
+            </div>
+
+            <div class="map-table-wrapper" id="map-table-container">
+              <div style="text-align:center;padding:100px;color:var(--text-muted)">
+                <i class="fa fa-table fa-3x" style="margin-bottom:12px"></i>
+                <div>No map loaded.<br>Select a map and click 'Load'. Make sure you have read ECU flash first.</div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between">
+              <span id="map-info-label">Map Size: --</span>
+              <span>Use W/S or +/- to edit values. Shift+Click to select multiple cells.</span>
             </div>
           </div>
+        </div>
 
-          <div class="card" style="margin-bottom:16px">
-            <div class="card-title" style="color:var(--danger)"><i class="fa fa-upload"></i> Write ECU Flash</div>
-            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:12px">
-              Write modified data back to the ECU. <strong>WARNING: Ensure stable power supply!</strong>
-            </p>
-            <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:12px;color:var(--warning)">
-              <input type="checkbox" id="chk-auto-backup" checked> Create auto-backup before writing (Recommended)
-            </label>
-            <div style="display:flex;gap:12px">
-              <button class="btn btn-danger flash-big-btn" id="btn-flash-write-cal" disabled>Write Calibration</button>
-              <button class="btn btn-danger flash-big-btn" id="btn-flash-write-full" disabled>Write Full Flash</button>
+        <!-- ===== FLASH ECU ===== -->
+        <div class="page-section" id="page-flash">
+          <div class="flash-container">
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title"><i class="fa fa-download"></i> Read ECU Flash</div>
+              <p style="color:var(--text-secondary);font-size:12px;margin-bottom:12px">
+                Read current calibration data or full flash image from the ECU into the device memory buffer.
+              </p>
+              <div style="display:flex;gap:12px">
+                <button class="btn btn-secondary flash-big-btn" id="btn-flash-read-cal">Read Calibration</button>
+                <button class="btn btn-secondary flash-big-btn" id="btn-flash-read-full">Read Full Flash</button>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title" style="color:var(--danger)"><i class="fa fa-upload"></i> Write ECU Flash</div>
+              <p style="color:var(--text-secondary);font-size:12px;margin-bottom:12px">
+                Write modified data back to the ECU. <strong>WARNING: Ensure stable power supply!</strong>
+              </p>
+              <label
+                style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:12px;color:var(--warning)">
+                <input type="checkbox" id="chk-auto-backup" checked> Create auto-backup before writing (Recommended)
+              </label>
+              <div style="display:flex;gap:12px">
+                <button class="btn btn-danger flash-big-btn" id="btn-flash-write-cal" disabled>Write
+                  Calibration</button>
+                <button class="btn btn-danger flash-big-btn" id="btn-flash-write-full" disabled>Write Full
+                  Flash</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title"><i class="fa fa-life-ring"></i> Recovery Mode</div>
+              <p style="color:var(--text-secondary);font-size:12px;margin-bottom:12px">
+                Use this if an ECU write fails and the ECU becomes unresponsive.
+              </p>
+              <button class="btn btn-warning flash-big-btn" id="btn-flash-recover">Start Recovery Mode</button>
+            </div>
+
+            <!-- Flash Progress Modal/Overlay embedded inline -->
+            <div class="flash-progress-box" id="flash-progress-box" style="display:none">
+              <div class="flash-status-text" id="flash-status-text">Operation in progress...</div>
+              <div class="progress-bar-wrap" style="height:12px">
+                <div class="progress-bar-fill" id="flash-progress-bar" style="width:0%"></div>
+              </div>
+              <div class="flash-details">
+                <span id="flash-speed">0 KB/s</span>
+                <span id="flash-eta">ETA: --:--</span>
+              </div>
+              <div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:12px" id="flash-msg">
+                Initializing...</div>
             </div>
           </div>
+        </div>
 
+        <!-- ===== FILE MANAGER ===== -->
+        <div class="page-section" id="page-files">
           <div class="card">
-            <div class="card-title"><i class="fa fa-life-ring"></i> Recovery Mode</div>
-            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:12px">
-              Use this if an ECU write fails and the ECU becomes unresponsive.
-            </p>
-            <button class="btn btn-warning flash-big-btn" id="btn-flash-recover">Start Recovery Mode</button>
-          </div>
-
-          <!-- Flash Progress Modal/Overlay embedded inline -->
-          <div class="flash-progress-box" id="flash-progress-box" style="display:none">
-            <div class="flash-status-text" id="flash-status-text">Operation in progress...</div>
-            <div class="progress-bar-wrap" style="height:12px">
-              <div class="progress-bar-fill" id="flash-progress-bar" style="width:0%"></div>
+            <div class="card-title"><i class="fa fa-folder-open"></i> Storage Manager</div>
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+              <button class="btn btn-secondary btn-sm" id="btn-fm-refresh"><i class="fa fa-rotate"></i> Refresh</button>
+              <button class="btn btn-secondary btn-sm" id="btn-fm-load-buffer"><i class="fa fa-upload"></i> Load
+                Selected into Flash Buffer</button>
             </div>
-            <div class="flash-details">
-              <span id="flash-speed">0 KB/s</span>
-              <span id="flash-eta">ETA: --:--</span>
-            </div>
-            <div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:12px" id="flash-msg">Initializing...</div>
+            <ul class="file-list" id="fm-file-list">
+              <li style="padding:24px;text-align:center;color:var(--text-muted)">Loading files...</li>
+            </ul>
           </div>
         </div>
-      </div>
 
-      <!-- ===== FILE MANAGER ===== -->
-      <div class="page-section" id="page-files">
-        <div class="card">
-          <div class="card-title"><i class="fa fa-folder-open"></i> Storage Manager</div>
-          <div style="display:flex;gap:8px;margin-bottom:16px">
-            <button class="btn btn-secondary btn-sm" id="btn-fm-refresh"><i class="fa fa-rotate"></i> Refresh</button>
-            <button class="btn btn-secondary btn-sm" id="btn-fm-load-buffer"><i class="fa fa-upload"></i> Load Selected into Flash Buffer</button>
-          </div>
-          <ul class="file-list" id="fm-file-list">
-            <li style="padding:24px;text-align:center;color:var(--text-muted)">Loading files...</li>
-          </ul>
-        </div>
-      </div>
+        <!-- ===== TERMINAL ===== -->
+        <div class="page-section" id="page-terminal">
+          <div class="card">
+            <div class="card-title"><i class="fa fa-terminal"></i> K-Line Terminal</div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+              <button class="btn btn-secondary btn-sm" id="btn-terminal-clear">🗑 Clear</button>
+              <button class="btn btn-secondary btn-sm" id="btn-terminal-export">⬇ Export TXT</button>
+              <button class="btn btn-secondary btn-sm" id="btn-load-log">📋 Load Server Log</button>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary)">
+                <input type="checkbox" id="terminal-autoscroll" checked> Auto Scroll
+              </label>
+            </div>
 
-      <!-- ===== TERMINAL ===== -->
-      <div class="page-section" id="page-terminal">
-        <div class="card">
-          <div class="card-title"><i class="fa fa-terminal"></i> K-Line Terminal</div>
-          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-            <button class="btn btn-secondary btn-sm" id="btn-terminal-clear">🗑 Clear</button>
-            <button class="btn btn-secondary btn-sm" id="btn-terminal-export">⬇ Export TXT</button>
-            <button class="btn btn-secondary btn-sm" id="btn-load-log">📋 Load Server Log</button>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary)">
-              <input type="checkbox" id="terminal-autoscroll" checked> Auto Scroll
-            </label>
-          </div>
-
-          <!-- Output -->
-          <div id="terminal-output" style="
+            <!-- Output -->
+            <div id="terminal-output" style="
             background:var(--bg-primary);
             border:1px solid var(--border-color);
             border-radius:var(--radius-sm);
@@ -383,44 +480,43 @@
             font-family:monospace;
           "></div>
 
-          <!-- Input -->
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <input type="text" class="form-control" id="terminal-input"
-              placeholder="Enter HEX bytes, e.g: C1 33 F1 81"
-              style="font-family:monospace">
-            <button class="btn btn-primary" id="btn-terminal-send">Send</button>
-          </div>
+            <!-- Input -->
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <input type="text" class="form-control" id="terminal-input"
+                placeholder="Enter HEX bytes, e.g: C1 33 F1 81" style="font-family:monospace">
+              <button class="btn btn-primary" id="btn-terminal-send">Send</button>
+            </div>
 
-          <!-- Quick Commands -->
-          <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
-            <span style="font-size:12px;color:var(--text-muted);align-self:center">Quick:</span>
-            <button class="btn btn-secondary btn-sm"
-              onclick="document.getElementById('terminal-input').value='C1 33 F1 81'">Start Comm</button>
-            <button class="btn btn-secondary btn-sm"
-              onclick="document.getElementById('terminal-input').value='02 10 81 94'">Init Session</button>
-            <button class="btn btn-secondary btn-sm"
-              onclick="document.getElementById('terminal-input').value='02 21 01 24'">Read RPM</button>
+            <!-- Quick Commands -->
+            <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+              <span style="font-size:12px;color:var(--text-muted);align-self:center">Quick:</span>
+              <button class="btn btn-secondary btn-sm"
+                onclick="document.getElementById('terminal-input').value='C1 33 F1 81'">Start Comm</button>
+              <button class="btn btn-secondary btn-sm"
+                onclick="document.getElementById('terminal-input').value='02 10 81 94'">Init Session</button>
+              <button class="btn btn-secondary btn-sm"
+                onclick="document.getElementById('terminal-input').value='02 21 01 24'">Read RPM</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- ===== LOGGER ===== -->
-      <div class="page-section" id="page-logger">
-        <div class="card">
-          <div class="card-title"><i class="fa fa-file-lines"></i> Session Logger</div>
-          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-            <button class="btn btn-success btn-sm" id="btn-log-start">
-              <i class="fa fa-circle"></i> Start Log
-            </button>
-            <button class="btn btn-danger btn-sm" id="btn-log-stop">
-              <i class="fa fa-stop"></i> Stop Log
-            </button>
-            <a href="/api/log/export" class="btn btn-secondary btn-sm">⬇ Export CSV</a>
-            <button class="btn btn-secondary btn-sm" id="btn-log-refresh">
-              🔄 Refresh
-            </button>
-          </div>
-          <div id="log-output" style="
+        <!-- ===== LOGGER ===== -->
+        <div class="page-section" id="page-logger">
+          <div class="card">
+            <div class="card-title"><i class="fa fa-file-lines"></i> Session Logger</div>
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+              <button class="btn btn-success btn-sm" id="btn-log-start">
+                <i class="fa fa-circle"></i> Start Log
+              </button>
+              <button class="btn btn-danger btn-sm" id="btn-log-stop">
+                <i class="fa fa-stop"></i> Stop Log
+              </button>
+              <a href="/api/log/export" class="btn btn-secondary btn-sm">⬇ Export CSV</a>
+              <button class="btn btn-secondary btn-sm" id="btn-log-refresh">
+                🔄 Refresh
+              </button>
+            </div>
+            <div id="log-output" style="
             background:var(--bg-primary);
             border:1px solid var(--border-color);
             border-radius:var(--radius-sm);
@@ -429,243 +525,279 @@
             overflow-y:auto;
             font-family:monospace;
           "></div>
-        </div>
-      </div>
-
-      <!-- ===== SETTINGS ===== -->
-      <div class="page-section" id="page-settings">
-        <div class="grid grid-2">
-
-          <!-- WiFi -->
-          <div class="card">
-            <div class="card-title"><i class="fa fa-wifi"></i> WiFi Access Point</div>
-            <div class="form-group">
-              <label class="form-label">SSID</label>
-              <input type="text" class="form-control" id="set-ssid" placeholder="Honda ECU Tool">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Password</label>
-              <input type="password" class="form-control" id="set-password" placeholder="(leave blank to keep)">
-            </div>
-          </div>
-
-          <!-- K-Line -->
-          <div class="card">
-            <div class="card-title"><i class="fa fa-plug-circle-bolt"></i> K-Line / ECU</div>
-            <div class="form-group">
-              <label class="form-label">UART Baudrate</label>
-              <select class="form-control" id="set-baud">
-                <option value="10400">10400 (Honda K-Line)</option>
-                <option value="9600">9600</option>
-                <option value="19200">19200</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Timeout (ms)</label>
-              <input type="number" class="form-control" id="set-timeout" value="1000">
-            </div>
-            <div class="form-group">
-              <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
-                <input type="checkbox" id="set-auto-reconnect"> Auto Reconnect
-              </label>
-            </div>
-          </div>
-
-          <!-- UI -->
-          <div class="card">
-            <div class="card-title"><i class="fa fa-palette"></i> Interface</div>
-            <div class="form-group">
-              <label class="form-label">Language</label>
-              <select class="form-control" id="set-language">
-                <option value="id">Bahasa Indonesia</option>
-                <option value="en">English</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
-                <input type="checkbox" id="set-dark-mode" checked> Dark Mode
-              </label>
-            </div>
-          </div>
-
-          <!-- Auth -->
-          <div class="card">
-            <div class="card-title"><i class="fa fa-lock"></i> Authentication</div>
-            <div class="form-group">
-              <label class="form-label">Username</label>
-              <input type="text" class="form-control" id="set-username">
-            </div>
-            <div class="form-group">
-              <label class="form-label">New Password</label>
-              <input type="password" class="form-control" id="set-auth-password" placeholder="(leave blank to keep)">
-            </div>
-          </div>
-
-        </div>
-
-        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
-          <button class="btn btn-primary" id="btn-save-settings">
-            <i class="fa fa-floppy-disk"></i> Save Settings
-          </button>
-          <button class="btn btn-danger" id="btn-reboot">
-            <i class="fa fa-power-off"></i> Reboot Device
-          </button>
-        </div>
-
-        <!-- OTA -->
-        <div class="card" style="margin-top:16px;max-width:500px">
-          <div class="card-title"><i class="fa fa-upload"></i> Firmware OTA Update</div>
-          <div class="form-group">
-            <input type="file" class="form-control" id="ota-file-input" accept=".bin">
-          </div>
-          <div style="margin-bottom:10px">
-            <div class="progress-bar-wrap"><div class="progress-bar-fill" id="ota-progress-bar" style="width:0%"></div></div>
-            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px" id="ota-progress-label"></div>
-          </div>
-          <button class="btn btn-warning" id="btn-ota-upload">
-            <i class="fa fa-upload"></i> Upload Firmware
-          </button>
-        </div>
-      </div>
-
-      <!-- ===== ABOUT ===== -->
-      <div class="page-section" id="page-about">
-        <div class="card" style="max-width:560px">
-          <div class="card-title"><i class="fa fa-circle-info"></i> About</div>
-          <table>
-            <tr><td>Tool</td><td>Honda ECU K-Line Diagnostic Tool</td></tr>
-            <tr><td>Version</td><td>1.0.0</td></tr>
-            <tr><td>Hardware</td><td>ESP32 DOIT V1 + 4N25 Optocoupler</td></tr>
-            <tr><td>Protocol</td><td>K-Line ISO 9141-2 / KWP2000</td></tr>
-            <tr><td>Baudrate</td><td>10400 bps</td></tr>
-            <tr><td>WiFi</td><td>Access Point — SSID: Honda ECU Tool</td></tr>
-            <tr><td>Default IP</td><td>192.168.4.1</td></tr>
-            <tr><td>Framework</td><td>Arduino ESP32 Core</td></tr>
-            <tr><td>Libraries</td><td>ESPAsyncWebServer, ArduinoJson, LittleFS</td></tr>
-          </table>
-          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-color);font-size:12px;color:var(--text-muted)">
-            ⚠️ Alat ini hanya untuk tujuan diagnostik. Jangan gunakan untuk memodifikasi data ECU kendaraan.
           </div>
         </div>
+
+        <!-- ===== SETTINGS ===== -->
+        <div class="page-section" id="page-settings">
+          <div class="grid grid-2">
+
+            <!-- WiFi -->
+            <div class="card">
+              <div class="card-title"><i class="fa fa-wifi"></i> WiFi Access Point</div>
+              <div class="form-group">
+                <label class="form-label">SSID</label>
+                <input type="text" class="form-control" id="set-ssid" placeholder="Honda ECU Tool">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" id="set-password" placeholder="(leave blank to keep)">
+              </div>
+            </div>
+
+            <!-- K-Line -->
+            <div class="card">
+              <div class="card-title"><i class="fa fa-plug-circle-bolt"></i> K-Line / ECU</div>
+              <div class="form-group">
+                <label class="form-label">UART Baudrate</label>
+                <select class="form-control" id="set-baud">
+                  <option value="10400">10400 (Honda K-Line)</option>
+                  <option value="9600">9600</option>
+                  <option value="19200">19200</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Timeout (ms)</label>
+                <input type="number" class="form-control" id="set-timeout" value="1000">
+              </div>
+              <div class="form-group">
+                <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+                  <input type="checkbox" id="set-auto-reconnect"> Auto Reconnect
+                </label>
+              </div>
+            </div>
+
+            <!-- UI -->
+            <div class="card">
+              <div class="card-title"><i class="fa fa-palette"></i> Interface</div>
+              <div class="form-group">
+                <label class="form-label">Language</label>
+                <select class="form-control" id="set-language">
+                  <option value="id">Bahasa Indonesia</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+                  <input type="checkbox" id="set-dark-mode" checked> Dark Mode
+                </label>
+              </div>
+            </div>
+
+            <!-- Auth -->
+            <div class="card">
+              <div class="card-title"><i class="fa fa-lock"></i> Authentication</div>
+              <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-control" id="set-username">
+              </div>
+              <div class="form-group">
+                <label class="form-label">New Password</label>
+                <input type="password" class="form-control" id="set-auth-password" placeholder="(leave blank to keep)">
+              </div>
+            </div>
+
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn-primary" id="btn-save-settings">
+              <i class="fa fa-floppy-disk"></i> Save Settings
+            </button>
+            <button class="btn btn-danger" id="btn-reboot">
+              <i class="fa fa-power-off"></i> Reboot Device
+            </button>
+          </div>
+
+          <!-- OTA -->
+          <div class="card" style="margin-top:16px;max-width:500px">
+            <div class="card-title"><i class="fa fa-upload"></i> Firmware OTA Update</div>
+            <div class="form-group">
+              <input type="file" class="form-control" id="ota-file-input" accept=".bin">
+            </div>
+            <div style="margin-bottom:10px">
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" id="ota-progress-bar" style="width:0%"></div>
+              </div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:4px" id="ota-progress-label"></div>
+            </div>
+            <button class="btn btn-warning" id="btn-ota-upload">
+              <i class="fa fa-upload"></i> Upload Firmware
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== ABOUT ===== -->
+        <div class="page-section" id="page-about">
+          <div class="card" style="max-width:560px">
+            <div class="card-title"><i class="fa fa-circle-info"></i> About</div>
+            <table>
+              <tr>
+                <td>Tool</td>
+                <td>Honda ECU K-Line Diagnostic Tool</td>
+              </tr>
+              <tr>
+                <td>Version</td>
+                <td>1.0.0</td>
+              </tr>
+              <tr>
+                <td>Hardware</td>
+                <td>ESP32 DOIT V1 + 4N25 Optocoupler</td>
+              </tr>
+              <tr>
+                <td>Protocol</td>
+                <td>K-Line ISO 9141-2 / KWP2000</td>
+              </tr>
+              <tr>
+                <td>Baudrate</td>
+                <td>10400 bps</td>
+              </tr>
+              <tr>
+                <td>WiFi</td>
+                <td>Access Point — SSID: Honda ECU Tool</td>
+              </tr>
+              <tr>
+                <td>Default IP</td>
+                <td>192.168.4.1</td>
+              </tr>
+              <tr>
+                <td>Framework</td>
+                <td>Arduino ESP32 Core</td>
+              </tr>
+              <tr>
+                <td>Libraries</td>
+                <td>ESPAsyncWebServer, ArduinoJson, LittleFS</td>
+              </tr>
+            </table>
+            <div
+              style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-color);font-size:12px;color:var(--text-muted)">
+              ⚠️ Alat ini hanya untuk tujuan diagnostik. Jangan gunakan untuk memodifikasi data ECU kendaraan.
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-body -->
+
+      <!-- Status Bar -->
+      <div class="statusbar">
+        <div class="status-item">
+          <div class="status-dot" id="sb-ws-dot"></div>
+          <span>WS</span>
+        </div>
+        <div class="status-item">
+          <div class="status-dot" id="sb-ecu-dot"></div>
+          <span id="sb-ecu-txt">ECU: Offline</span>
+        </div>
+        <div class="status-item"><span id="sb-wifi">WiFi</span></div>
+        <div class="status-item"><span id="sb-vbat">Vbat: —</span></div>
+        <div class="status-item"><span id="sb-mem">Heap: —</span></div>
+        <div class="status-item"><span id="sb-cpu">CPU: —</span></div>
       </div>
 
-    </div><!-- /page-body -->
+    </div><!-- /main-content -->
+  </div><!-- /app-layout -->
 
-    <!-- Status Bar -->
-    <div class="statusbar">
-      <div class="status-item">
-        <div class="status-dot" id="sb-ws-dot"></div>
-        <span>WS</span>
-      </div>
-      <div class="status-item">
-        <div class="status-dot" id="sb-ecu-dot"></div>
-        <span id="sb-ecu-txt">ECU: Offline</span>
-      </div>
-      <div class="status-item"><span id="sb-wifi">WiFi</span></div>
-      <div class="status-item"><span id="sb-vbat">Vbat: —</span></div>
-      <div class="status-item"><span id="sb-mem">Heap: —</span></div>
-      <div class="status-item"><span id="sb-cpu">CPU: —</span></div>
-    </div>
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/live.js"></script>
+  <script src="js/dtc.js"></script>
+  <script src="js/backup.js"></script>
+  <script src="js/terminal.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/mapeditor.js"></script>
+  <script src="js/flashui.js"></script>
+  <script src="js/filemanager.js"></script>
+  <!-- dashboard.js terakhir karena App.init() memanggil Live, Diag, dll -->
+  <script src="js/dashboard.js"></script>
 
-  </div><!-- /main-content -->
-</div><!-- /app-layout -->
+  <script>
+    // Wire up buttons that can't be bound inside module scripts
+    document.addEventListener('DOMContentLoaded', () => {
 
-<!-- Scripts -->
-<script src="js/api.js"></script>
-<script src="js/live.js"></script>
-<script src="js/dtc.js"></script>
-<script src="js/backup.js"></script>
-<script src="js/terminal.js"></script>
-<script src="js/settings.js"></script>
-<script src="js/mapeditor.js"></script>
-<script src="js/flashui.js"></script>
-<script src="js/filemanager.js"></script>
-<!-- dashboard.js terakhir karena App.init() memanggil Live, Diag, dll -->
-<script src="js/dashboard.js"></script>
-
-<script>
-// Wire up buttons that can't be bound inside module scripts
-document.addEventListener('DOMContentLoaded', () => {
-
-  // ---- Read ECU ID (Vehicle page) ----
-  const btnReadId = document.getElementById('btn-read-ecu-id');
-  if (btnReadId) {
-    btnReadId.addEventListener('click', () => {
-      btnReadId.disabled = true;
-      btnReadId.textContent = 'Reading…';
-      API.readId()
-        .then(d => {
-          const set = (id, val) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = val;
-          };
-          set('ecu-mfr',   d.manufacturer || '—');
-          set('ecu-part',  d.partNumber   || '—');
-          set('ecu-fw',    d.fwVersion    || '—');
-          set('ecu-hw',    d.hwVersion    || '—');
-          set('ecu-proto', d.protocol     || '—');
-          set('ecu-eeprom',(d.eepromSize  || 0) + ' bytes');
-          set('ecu-chk',   '0x' + ((d.checksum || 0).toString(16).toUpperCase()));
-          App.toast('success', 'ECU ID Read', d.partNumber || 'OK');
-        })
-        .catch(e => App.toast('error', 'Read ID Failed', e.message))
-        .finally(() => {
-          btnReadId.disabled = false;
-          btnReadId.innerHTML = '<i class="fa fa-id-card"></i> Read ECU ID';
+      // ---- Read ECU ID (Vehicle page) ----
+      const btnReadId = document.getElementById('btn-read-ecu-id');
+      if (btnReadId) {
+        btnReadId.addEventListener('click', () => {
+          btnReadId.disabled = true;
+          btnReadId.textContent = 'Reading…';
+          API.readId()
+            .then(d => {
+              const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+              };
+              set('ecu-mfr', d.manufacturer || '—');
+              set('ecu-part', d.partNumber || '—');
+              set('ecu-fw', d.fwVersion || '—');
+              set('ecu-hw', d.hwVersion || '—');
+              set('ecu-proto', d.protocol || '—');
+              set('ecu-eeprom', (d.eepromSize || 0) + ' bytes');
+              set('ecu-chk', '0x' + ((d.checksum || 0).toString(16).toUpperCase()));
+              App.toast('success', 'ECU ID Read', d.partNumber || 'OK');
+            })
+            .catch(e => App.toast('error', 'Read ID Failed', e.message))
+            .finally(() => {
+              btnReadId.disabled = false;
+              btnReadId.innerHTML = '<i class="fa fa-id-card"></i> Read ECU ID';
+            });
         });
-    });
-  }
+      }
 
-  // ---- Logger page buttons ----
-  const btnLogStart   = document.getElementById('btn-log-start');
-  const btnLogStop    = document.getElementById('btn-log-stop');
-  const btnLogRefresh = document.getElementById('btn-log-refresh');
-  const logOutput     = document.getElementById('log-output');
+      // ---- Logger page buttons ----
+      const btnLogStart = document.getElementById('btn-log-start');
+      const btnLogStop = document.getElementById('btn-log-stop');
+      const btnLogRefresh = document.getElementById('btn-log-refresh');
+      const logOutput = document.getElementById('log-output');
 
-  if (btnLogStart) {
-    btnLogStart.addEventListener('click', () => {
-      API.startLog()
-        .then(r => App.toast('success', 'Logging started', r.file || ''))
-        .catch(e => App.toast('error', 'Error', e.message));
-    });
-  }
-
-  if (btnLogStop) {
-    btnLogStop.addEventListener('click', () => {
-      API.stopLog()
-        .then(() => App.toast('info', 'Log stopped', ''))
-        .catch(e => App.toast('error', 'Error', e.message));
-    });
-  }
-
-  if (btnLogRefresh) {
-    btnLogRefresh.addEventListener('click', () => {
-      API.log(100).then(r => {
-        if (!logOutput) return;
-        logOutput.innerHTML = '';
-        const colors = { INF: '#22c55e', WRN: '#f59e0b', ERR: '#ef4444', DBG: '#8a91a8' };
-        (r.logs || []).forEach(l => {
-          const d = document.createElement('div');
-          d.style.cssText = 'font-family:monospace;font-size:12px;padding:1px 0';
-          const ts    = (l.ts / 1000).toFixed(3);
-          const color = colors[l.level] || '#f0f2f8';
-          d.innerHTML =
-            `<span style="color:var(--text-muted)">[${ts}]</span> ` +
-            `<span style="color:${color}">${l.level}</span> ` +
-            `[${l.tag}] ${l.msg}`;
-          logOutput.appendChild(d);
+      if (btnLogStart) {
+        btnLogStart.addEventListener('click', () => {
+          API.startLog()
+            .then(r => App.toast('success', 'Logging started', r.file || ''))
+            .catch(e => App.toast('error', 'Error', e.message));
         });
-        logOutput.scrollTop = logOutput.scrollHeight;
-      }).catch(e => App.toast('error', 'Error', e.message));
-    });
-  }
-});
-</script>
+      }
 
-<style>
-  .page-section { display: none; }
-  .page-section.active { display: block; }
-</style>
+      if (btnLogStop) {
+        btnLogStop.addEventListener('click', () => {
+          API.stopLog()
+            .then(() => App.toast('info', 'Log stopped', ''))
+            .catch(e => App.toast('error', 'Error', e.message));
+        });
+      }
+
+      if (btnLogRefresh) {
+        btnLogRefresh.addEventListener('click', () => {
+          API.log(100).then(r => {
+            if (!logOutput) return;
+            logOutput.innerHTML = '';
+            const colors = { INF: '#22c55e', WRN: '#f59e0b', ERR: '#ef4444', DBG: '#8a91a8' };
+            (r.logs || []).forEach(l => {
+              const d = document.createElement('div');
+              d.style.cssText = 'font-family:monospace;font-size:12px;padding:1px 0';
+              const ts = (l.ts / 1000).toFixed(3);
+              const color = colors[l.level] || '#f0f2f8';
+              d.innerHTML =
+                `<span style="color:var(--text-muted)">[${ts}]</span> ` +
+                `<span style="color:${color}">${l.level}</span> ` +
+                `[${l.tag}] ${l.msg}`;
+              logOutput.appendChild(d);
+            });
+            logOutput.scrollTop = logOutput.scrollHeight;
+          }).catch(e => App.toast('error', 'Error', e.message));
+        });
+      }
+    });
+  </script>
+
+  <style>
+    .page-section {
+      display: none;
+    }
+
+    .page-section.active {
+      display: block;
+    }
+  </style>
 
 </body>
+
 </html>

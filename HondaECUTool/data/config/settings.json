@@ -1,6 +1,6 @@
 {
-  "wifiSSID": "Honda ECU Tool",
-  "wifiPassword": "********",
+  "wifiSSID": "IG @abiriann.ab",
+  "wifiPassword": "12345678",
   "uartBaud": 10400,
   "autoReconnect": true,
   "timeoutMs": 1000,

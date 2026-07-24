@@ -117,6 +117,7 @@ Plugin ini digunakan untuk mengupload file web (HTML/CSS/JS) ke memori ESP32.
 
 1. Download plugin dari:
    https://github.com/lorol/arduino-esp32littlefs-plugin/releases
+   
    https://github.com/earlephilhower/arduino-littlefs-upload/releases
    
    Download file: `esp32littlefs.vsix` (Arduino IDE 2.x) atau `esp32_littlefs.jar` (IDE 1.8.x)
