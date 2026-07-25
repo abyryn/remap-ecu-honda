@@ -11,7 +11,7 @@
 #define DEVICE_NAME      "Honda ECU Remapper"
 
 // --- Features ---
-#define ENABLE_BLUETOOTH 1   // Set to 1 if Partition Scheme is Huge APP/No OTA (3MB). Set to 0 if Default 4MB (1.3MB APP).
+#define ENABLE_BLUETOOTH 0   // Set to 0 (Bluetooth disabled to prevent RAM/Flash overload)
 
 // --- WiFi ---
 #define WIFI_SSID        "Honda ECU Tool"

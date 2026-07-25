@@ -265,7 +265,7 @@ bool ECUManager::readEEPROM(uint8_t* buf, size_t size,
     size_t offset = 0;
 
     while (offset < size) {
-        size_t toRead = min(CHUNK, size - offset);
+        size_t toRead = min((size_t)CHUNK, (size_t)(size - offset));
 
         uint8_t req[6];
         req[0] = 0x04;
@@ -342,7 +342,7 @@ String ECUManager::ecuInfoToJson() {
 
 // ---- dtcToJson ----
 String ECUManager::dtcToJson() {
-    DynamicJsonDocument doc(1024);
+    StaticJsonDocument<512> doc;
     JsonArray arr = doc.createNestedArray("dtcs");
     for (auto& d : _dtcs) {
         JsonObject o = arr.createNestedObject();

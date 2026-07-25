@@ -86,7 +86,7 @@ bool AESCipher::encrypt(const uint8_t* key, const uint8_t* input, uint8_t* outpu
 
     for (size_t i = 0; i < blocks; i++) {
         uint8_t block[16] = {0};
-        size_t copyLen = min((size_t)16, len - i * 16);
+        size_t copyLen = min((size_t)16, (size_t)(len - i * 16));
         memcpy(block, input + i * 16, copyLen);
 
         // XOR with previous ciphertext (CBC)
@@ -120,7 +120,7 @@ bool AESCipher::decrypt(const uint8_t* key, const uint8_t* input, uint8_t* outpu
         for (int j = 0; j < 16; j++) decrypted[j] ^= iv[j];
 
         memcpy(iv, input + i * 16, 16);
-        size_t copyLen = min((size_t)16, len - i * 16);
+        size_t copyLen = min((size_t)16, (size_t)(len - i * 16));
         memcpy(output + i * 16, decrypted, copyLen);
     }
 

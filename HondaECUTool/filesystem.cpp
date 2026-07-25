@@ -100,7 +100,7 @@ std::vector<FileInfo> FileSystemClass::listDir(const String& path) {
 }
 
 String FileSystemClass::listDirJson(const String& path) {
-    DynamicJsonDocument doc(2048);
+    StaticJsonDocument<1024> doc;
     JsonArray arr = doc.createNestedArray("files");
 
     auto files = listDir(path);

@@ -5,6 +5,7 @@
 #include "include/kline.h"
 #include "include/config.h"
 #include "include/logger.h"
+#include <esp_task_wdt.h>
 
 KLineDriver KLine;
 
@@ -83,12 +84,43 @@ void KLineDriver::_sendFrameSlow(const uint8_t* data, size_t len, uint8_t interB
     if (!_serial || !data || len == 0) return;
 
     for (size_t i = 0; i < len; i++) {
+        esp_task_wdt_reset();
         _serial->write(data[i]);
         _serial->flush(); // Wait until byte is physically sent
         if (i < len - 1 && interByteMs > 0) {
             delay(interByteMs);
         }
     }
+}
+
+// ============================================================
+// Fast Init — Honda PGM-FI Motorcycle (CB150R / Beat / Vario etc.)
+//
+// Strategy order optimized for Honda CB150R 2014:
+//   1. 70ms wakeup + Honda PGM-FI frame (72 05 71 00 18)
+//   2. 70ms wakeup + Honda HDS frame (FE 04 72 8C)
+//   3. Direct Honda PGM-FI frame (no wakeup, for already-awake ECU)
+//   4. ISO 14230 Fast Init (25ms/25ms wakeup)
+// ============================================================
+// ---- Send K-Line Wakeup Pulse (LOW for lowMs, HIGH for highMs) ----
+void KLineDriver::_sendWakeupPulse(uint32_t lowMs, uint32_t highMs) {
+    esp_task_wdt_reset();
+    pinMode(_txPin, OUTPUT);
+    _driveLine(true);  // K-Line HIGH (idle)
+    delay(200);        // Idle time before pulse
+
+    esp_task_wdt_reset();
+    _driveLine(false); // K-Line LOW pulse
+    delay(lowMs);
+
+    esp_task_wdt_reset();
+    _driveLine(true);  // K-Line HIGH (idle)
+    delay(highMs);
+
+    // Re-attach TX pin to UART without calling _serial->end()
+    _serial->setPins(_rxPin, _txPin);
+    delay(15);
+    _flush();
 }
 
 // ============================================================
@@ -107,33 +139,10 @@ KLineResult KLineDriver::_fastInit() {
 
     // ========================================================
     // Strategy 1: 70ms Wakeup + Honda PGM-FI Init
-    //   This is the PRIMARY strategy for Honda motorcycle ECUs
-    //   Wakeup: K-Line LOW 70ms, then HIGH 130ms
-    //   Frame: 72 05 71 00 18 (Init session request)
     // ========================================================
     Logger.log(LOG_INFO, "KLine", "Strategy 1: 70ms Wakeup + PGM-FI Init");
 
-    // Stop UART, take manual control of TX pin for wakeup pulse
-    if (_serial) _serial->end();
-    delay(5); // Let UART peripheral fully release the pin
-    pinMode(_txPin, OUTPUT);
-
-    // Ensure K-Line is idle HIGH before wakeup
-    _driveLine(true);  // K-Line HIGH (idle)
-    delay(300);         // ECU needs idle time before wakeup
-
-    // Wakeup pulse: K-Line LOW for 70ms
-    _driveLine(false);
-    delay(70);
-
-    // Return to idle: K-Line HIGH for 130ms
-    _driveLine(true);
-    delay(130);
-
-    // Re-initialize UART for data communication
-    _serial->begin(_baud, SERIAL_8N1, _rxPin, _txPin, _invert);
-    delay(20);
-    _flush();
+    _sendWakeupPulse(70, 130);
 
     // Send Honda PGM-FI init frame with inter-byte timing
     uint8_t pgmReq[] = {0x72, 0x05, 0x71, 0x00, 0x18};
@@ -159,26 +168,10 @@ KLineResult KLineDriver::_fastInit() {
 
     // ========================================================
     // Strategy 2: 70ms Wakeup + Honda HDS Init Frame
-    //   Some Honda ECUs use HDS format: FE 04 72 8C
     // ========================================================
     Logger.log(LOG_INFO, "KLine", "Strategy 2: 70ms Wakeup + HDS Init");
 
-    if (_serial) _serial->end();
-    delay(5);
-    pinMode(_txPin, OUTPUT);
-
-    _driveLine(true);
-    delay(300);
-
-    _driveLine(false);
-    delay(70);
-
-    _driveLine(true);
-    delay(130);
-
-    _serial->begin(_baud, SERIAL_8N1, _rxPin, _txPin, _invert);
-    delay(20);
-    _flush();
+    _sendWakeupPulse(70, 130);
 
     uint8_t hdsReq[] = {0xFE, 0x04, 0x72, 0x8C};
     Logger.logHex(LOG_INFO, "KLine TX (HDS Init)", hdsReq, 4);
@@ -200,11 +193,9 @@ KLineResult KLineDriver::_fastInit() {
 
     // ========================================================
     // Strategy 3: Direct PGM-FI Frame (no wakeup pulse)
-    //   For ECUs that are already awake / listening
     // ========================================================
     Logger.log(LOG_INFO, "KLine", "Strategy 3: Direct PGM-FI (no wakeup)");
 
-    // UART should already be initialized from Strategy 2
     delay(50);
     _flush();
 
@@ -227,26 +218,10 @@ KLineResult KLineDriver::_fastInit() {
 
     // ========================================================
     // Strategy 4: ISO 14230 Fast Init (25ms LOW, 25ms HIGH)
-    //   Standard KWP2000 fast init — fallback for non-Honda ECUs
     // ========================================================
     Logger.log(LOG_INFO, "KLine", "Strategy 4: ISO 14230 Fast Init");
 
-    if (_serial) _serial->end();
-    delay(5);
-    pinMode(_txPin, OUTPUT);
-
-    _driveLine(true);
-    delay(300);
-
-    _driveLine(false);
-    delay(25);
-
-    _driveLine(true);
-    delay(25);
-
-    _serial->begin(_baud, SERIAL_8N1, _rxPin, _txPin, _invert);
-    delay(15);
-    _flush();
+    _sendWakeupPulse(25, 25);
 
     // ISO 14230 StartCommunication: C1 33 F1 81 + checksum
     uint8_t isoReq[] = {0xC1, 0x33, 0xF1, 0x81};
@@ -281,8 +256,6 @@ KLineResult KLineDriver::_5baudInit() {
     Logger.log(LOG_INFO, "KLine", "Starting 5-Baud Init (address 0x33)");
 
     _flush();
-    if (_serial) _serial->end();
-    delay(5);
 
     pinMode(_txPin, OUTPUT);
     _driveLine(true); // idle HIGH
@@ -296,8 +269,8 @@ KLineResult KLineDriver::_5baudInit() {
     // Wait W1 (200-300ms) before re-initializing UART
     delay(200);
 
-    // Re-init UART at 10400 with inversion configuration
-    _serial->begin(_baud, SERIAL_8N1, _rxPin, _txPin, _invert);
+    // Re-attach UART pins
+    _serial->setPins(_rxPin, _txPin);
     delay(20);
     _flush();
 
@@ -444,6 +417,7 @@ KLineResult KLineDriver::receiveRaw(uint8_t* buf, size_t& len, uint32_t timeoutM
     bool receivingStarted = false;
 
     while (millis() - start < timeoutMs) {
+        esp_task_wdt_reset();
         if (_serial->available()) {
             uint8_t b = _serial->read();
 
@@ -476,6 +450,7 @@ KLineResult KLineDriver::request(const uint8_t* req, size_t reqLen,
     if (!_initialized) return KLINE_ERR_NOINIT;
 
     for (uint8_t attempt = 0; attempt < _retryMax; attempt++) {
+        esp_task_wdt_reset();
         _flush();
 
         // Send with inter-byte delay for Honda protocol compliance

@@ -100,6 +100,7 @@ private:
 
     KLineResult _fastInit();
     KLineResult _5baudInit();
+    void        _sendWakeupPulse(uint32_t lowMs, uint32_t highMs);
     void        _bitBangByte(uint8_t byte, uint32_t baud);
     void        _drainEcho(const uint8_t* sentData, size_t len, uint32_t timeoutMs = 50);
     void        _driveLine(bool lineHigh);

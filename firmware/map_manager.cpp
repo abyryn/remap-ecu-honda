@@ -97,7 +97,7 @@ void MapManager::loadLayout(HondaModel model, const String& partNumber) {
 }
 
 String MapManager::getMapListJson() const {
-    DynamicJsonDocument doc(2048);
+    StaticJsonDocument<1024> doc;
     JsonArray arr = doc.createNestedArray("maps");
 
     if (_currentLayout) {

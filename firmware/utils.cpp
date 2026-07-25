@@ -67,9 +67,7 @@ String heapJson() {
 
 float cpuTemperature() {
     // ESP32 internal temperature sensor (approximate, not calibrated)
-    extern uint8_t temprature_sens_read();  // ROM function
-    uint8_t raw = temprature_sens_read();
-    return (raw - 32) / 1.8f;
+    return temperatureRead();
 }
 
 float mapFloat(float x, float inMin, float inMax, float outMin, float outMax) {

@@ -51,11 +51,20 @@ void setup() {
     digitalWrite(LED_PIN, HIGH);
 
     // --- Watchdog ---
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 5
+    esp_task_wdt_config_t twdt_config = {
+        .timeout_ms = WDT_TIMEOUT_SEC * 1000,
+        .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
+        .trigger_panic = true
+    };
+    esp_task_wdt_init(&twdt_config);
+#else
     esp_task_wdt_init(WDT_TIMEOUT_SEC, true);
+#endif
     esp_task_wdt_add(nullptr);
 
     // --- Logger ---
-    Logger.begin(LOG_DEBUG);
+    Logger.begin(LOG_INFO);
     Logger.log(LOG_INFO, "Main", "Booting...");
 
     // --- LittleFS ---
@@ -92,12 +101,16 @@ void setup() {
     WebSrv.begin();
 
     // --- ADC setup for voltage monitor ---
+#if defined(ADC_ATTEN_DB_11)
+    analogSetAttenuation(ADC_ATTEN_DB_11);
+#else
     analogSetAttenuation(ADC_11db);
+#endif
     analogReadResolution(12);
     pinMode(VBAT_PIN, INPUT);
 
     Logger.log(LOG_INFO, "Main", "Boot complete. IP: %s", WiFiAP.getIP().c_str());
-    Logger.log(LOG_INFO, "Main", "Free heap: %d bytes", ESP.getFreeHeap());
+    Logger.log(LOG_INFO, "Main", "Heap free=%d min=%d", ESP.getFreeHeap(), ESP.getMinFreeHeap());
     Logger.log(LOG_INFO, "Main", "SSID: %s  Pass: %s",
                Settings.get().wifiSSID.c_str(),
                Settings.get().wifiPassword.c_str());
@@ -115,7 +128,9 @@ void setup() {
 
 // ============================================================
 void loop() {
-    // Bluetooth Serial command processor & monitor update
+    esp_task_wdt_reset(); // Feed task watchdog
+
+    // Logger update
     Logger.update();
 
     // LED status indicator

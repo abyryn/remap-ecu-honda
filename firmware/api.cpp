@@ -12,6 +12,8 @@
 #include "include/flash_manager.h"
 #include "include/map_manager.h"
 #include "include/webserver.h"
+#include "include/settings.h"
+#include "include/utils.h"
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
