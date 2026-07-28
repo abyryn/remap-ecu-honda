@@ -105,30 +105,29 @@ void ECUManager::disconnect() {
 
 // ---- readIdentification ----
 bool ECUManager::readIdentification() {
-    uint8_t req[] = {0x02, SVC_READ_ID, 0x01, 0x00};
-    req[3] = KLineDriver::calcChecksum(req, 3);
-
     uint8_t resp[64];
     size_t  len = 0;
 
-    if (!_sendService(SVC_READ_ID, req + 2, 1, resp, len)) {
-        Logger.log(LOG_WARN, "ECU", "Read ID failed");
-        return false;
+    uint8_t param = 0x00;
+    if (!_sendService(SVC_READ_ID, &param, 1, resp, len)) {
+        if (!_sendService(SVC_READ_ID, nullptr, 0, resp, len)) {
+            Logger.log(LOG_WARN, "ECU", "Read ID failed");
+            return false;
+        }
     }
 
     // Parse response (Honda format)
     if (len >= 6) {
         char buf[32];
-        // Part number: bytes 3..12
         snprintf(buf, sizeof(buf), "%02X%02X-%02X%02X",
                  resp[3], resp[4], resp[5], resp[6]);
         _info.partNumber = String(buf);
-        _info.firmwareVersion = String("1.") + String(resp[7]);
-        _info.hardwareVersion = String("HW") + String(resp[8]);
-        _info.manufacturer    = "Honda";
-        _info.protocol        = "K-Line ISO9141";
+        _info.firmwareVersion = String("1.") + String(len >= 8 ? resp[7] : 0);
+        _info.hardwareVersion = String("HW") + String(len >= 9 ? resp[8] : 0);
+        _info.manufacturer    = "Honda PGM-FI";
+        _info.protocol        = "Honda K-Line 10400bps";
         _info.eepromSize      = 256;
-        _info.flashSize       = 0;
+        _info.flashSize       = 262144;
         _info.checksum        = resp[len - 1];
         Logger.log(LOG_INFO, "ECU", "ID: %s FW: %s",
                    _info.partNumber.c_str(), _info.firmwareVersion.c_str());
@@ -142,62 +141,74 @@ bool ECUManager::readIdentification() {
 bool ECUManager::readLiveData() {
     if (!isConnected()) return false;
 
-    uint8_t resp[16];
+    uint8_t resp[64];
     size_t  len = 0;
 
+    // 1. Primary Method: Honda PGM-FI Table 0 Data Request (0x72 0x05 0x72 0x00 0x17)
+    // Command 0x72 with Sub-table 0x00 returns all live sensors in a single response frame
+    uint8_t tableParam = 0x00;
+    if (_sendService(0x72, &tableParam, 1, resp, len) && len >= 12) {
+        size_t dOffset = 3;
+        if (resp[0] == 0x02 && len >= dOffset + 10) {
+            dOffset = 4;
+        }
+
+        uint16_t rawRpm = ((uint16_t)resp[dOffset] << 8) | resp[dOffset + 1];
+        _live.rpm = (rawRpm > 15000) ? (rawRpm * 50 / 6) : rawRpm;
+        _live.tps = resp[dOffset + 2] * 100.0f / 255.0f;
+        _live.ect = (float)resp[dOffset + 3] - 40.0f;
+        _live.iat = (float)resp[dOffset + 4] - 40.0f;
+        _live.map = (float)resp[dOffset + 5];
+
+        float vbatCalc = resp[dOffset + 6] * 0.0625f;
+        _live.battVoltage = (vbatCalc >= 5.0f && vbatCalc <= 20.0f) ? vbatCalc : (resp[dOffset + 6] * 0.1f);
+
+        _live.injPulseWidth = (((uint16_t)resp[dOffset + 7] << 8) | resp[dOffset + 8]) * 0.001f;
+        _live.ignTiming     = (float)resp[dOffset + 9] - 64.0f;
+
+        if (dOffset + 10 < len - 1) {
+            _live.vehicleSpeed = resp[dOffset + 10];
+        }
+        if (dOffset + 11 < len - 1) {
+            _live.o2Sensor = resp[dOffset + 11] * 4.882f;
+        }
+
+        _live.closedLoop = (_live.o2Sensor > 100.0f && _live.o2Sensor < 900.0f);
+        _live.timestamp  = millis();
+        return true;
+    }
+
+    // 2. Fallback Method: Individual PID requests using Honda service format
     auto readPID = [&](uint8_t pid) -> bool {
         return _readDataByLocalId(pid, resp, len);
     };
 
-    // RPM
-    if (readPID(PID_RPM) && len >= 4)
-        _live.rpm = ((uint16_t)resp[2] << 8 | resp[3]) * 50 / 6; // Honda scale
-
-    // TPS
+    if (readPID(PID_RPM) && len >= 4) {
+        uint16_t rawRpm = ((uint16_t)resp[2] << 8) | resp[3];
+        _live.rpm = (rawRpm > 15000) ? (rawRpm * 50 / 6) : rawRpm;
+    }
     if (readPID(PID_TPS) && len >= 3)
         _live.tps = resp[2] * 100.0f / 255.0f;
-
-    // MAP
     if (readPID(PID_MAP) && len >= 3)
-        _live.map = resp[2] * 1.0f;  // kPa
-
-    // IAT
+        _live.map = resp[2] * 1.0f;
     if (readPID(PID_IAT) && len >= 3)
-        _live.iat = (float)resp[2] - 40.0f;  // °C offset
-
-    // ECT
+        _live.iat = (float)resp[2] - 40.0f;
     if (readPID(PID_ECT) && len >= 3)
         _live.ect = (float)resp[2] - 40.0f;
-
-    // Battery Voltage
     if (readPID(PID_BATT) && len >= 3)
         _live.battVoltage = resp[2] * 0.0625f;
-
-    // Injector PW
     if (readPID(PID_INJ_PW) && len >= 4)
         _live.injPulseWidth = ((uint16_t)resp[2] << 8 | resp[3]) * 0.001f;
-
-    // Ignition Timing
     if (readPID(PID_IGN_TIMING) && len >= 3)
         _live.ignTiming = (float)resp[2] - 64.0f;
-
-    // Vehicle Speed
     if (readPID(PID_SPEED) && len >= 3)
         _live.vehicleSpeed = resp[2];
-
-    // Engine Load
     if (readPID(PID_ENGINE_LOAD) && len >= 3)
         _live.engineLoad = resp[2] * 100.0f / 255.0f;
-
-    // Idle Switch
     if (readPID(PID_IDLE_SW) && len >= 3)
         _live.idleSwitch = (resp[2] & 0x01) != 0;
-
-    // O2 Sensor
     if (readPID(PID_O2) && len >= 3)
-        _live.o2Sensor = resp[2] * 4.882f;  // mV
-
-    // Fuel Trim
+        _live.o2Sensor = resp[2] * 4.882f;
     if (readPID(PID_FUEL_TRIM) && len >= 3)
         _live.fuelTrim = ((float)resp[2] - 128.0f) * 100.0f / 128.0f;
 
@@ -395,13 +406,14 @@ bool ECUManager::_sendService(uint8_t service, const uint8_t* params, size_t pLe
     uint8_t req[32];
     size_t  reqLen = 0;
 
-    req[reqLen++] = (uint8_t)(pLen + 1);  // length byte
+    req[reqLen++] = 0x72;                       // Honda ECU Target Address Header
+    req[reqLen++] = (uint8_t)(pLen + 4);        // Total Frame Length: 0x72(1) + Len(1) + Service(1) + pLen + Checksum(1)
     req[reqLen++] = service;
     if (params && pLen > 0) {
         memcpy(req + reqLen, params, pLen);
         reqLen += pLen;
     }
-    req[reqLen] = KLineDriver::calcChecksum(req, reqLen);
+    req[reqLen] = KLineDriver::calcHondaChecksum(req, reqLen);
     reqLen++;
 
     KLineResult r = KLine.request(req, reqLen, resp, respLen, KLINE_TIMEOUT_MS);

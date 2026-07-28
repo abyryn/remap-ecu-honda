@@ -71,14 +71,24 @@ public:
                         uint32_t timeoutMs = 1000);
 
     /**
-     * @brief Calculate K-Line checksum (sum of all bytes mod 256)
+     * @brief Calculate K-Line checksum (Honda 2's complement: 0x100 - (sum & 0xFF))
      */
     static uint8_t calcChecksum(const uint8_t* data, size_t len);
+
+    /**
+     * @brief Calculate Honda 2's complement checksum (0x100 - (sum & 0xFF))
+     */
+    static uint8_t calcHondaChecksum(const uint8_t* data, size_t len);
 
     /**
      * @brief Validate checksum of received frame (supports sum mod 256 and Honda 2's complement)
      */
     static bool validateChecksum(const uint8_t* data, size_t len);
+
+    /**
+     * @brief Run hardware loopback and pin state diagnostic check
+     */
+    void testHardware();
 
     bool     isInitialized() const { return _initialized; }
     void     setRetryCount(uint8_t n) { _retryMax = n; }

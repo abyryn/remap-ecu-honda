@@ -12,7 +12,7 @@ KLineDriver KLine;
 // ---- Constructor ----
 KLineDriver::KLineDriver()
     : _serial(nullptr), _txPin(KLINE_TX_PIN), _rxPin(KLINE_RX_PIN),
-      _baud(KLINE_BAUD), _invert(false), _echoCancel(true),
+      _baud(KLINE_BAUD), _invert(true), _echoCancel(true),
       _initialized(false), _retryMax(KLINE_RETRY_MAX) {}
 
 // ---- begin ----
@@ -22,10 +22,19 @@ void KLineDriver::begin(uint8_t txPin, uint8_t rxPin, uint32_t baud, bool invert
     _baud   = baud;
     _invert = invert;
     _serial = &Serial2;
+
+#ifdef KLINE_DTR_PIN
+    pinMode(KLINE_DTR_PIN, OUTPUT);
+    digitalWrite(KLINE_DTR_PIN, HIGH); // DTR Gate ON (GPIO 19)
+#endif
+#ifdef KLINE_CTS_PIN
+    pinMode(KLINE_CTS_PIN, INPUT_PULLUP); // CTS / CTR Pin (GPIO 18)
+#endif
+
     _serial->begin(baud, SERIAL_8N1, rxPin, txPin, invert);
     _flush();
-    Logger.log(LOG_INFO, "KLine", "UART init TX=%d RX=%d baud=%d invert=%s", 
-               txPin, rxPin, baud, invert ? "true" : "false");
+    Logger.log(LOG_INFO, "KLine", "UART init TX=%d RX=%d DTR=%d CTS=%d baud=%d invert=%s", 
+               txPin, rxPin, KLINE_DTR_PIN, KLINE_CTS_PIN, baud, invert ? "true" : "false");
 }
 
 // ---- end ----
@@ -47,35 +56,50 @@ void KLineDriver::_driveLine(bool lineHigh) {
 // ---- init (auto detect) ----
 KLineResult KLineDriver::init(KLineInitMode mode) {
     KLineResult res = KLINE_ERR_GENERAL;
+    bool originalInvert = _invert;
 
-    for (uint8_t attempt = 0; attempt < _retryMax; attempt++) {
-        Logger.log(LOG_INFO, "KLine", "Init attempt %d/%d mode=%d invert=%s echo=%s",
-                   attempt + 1, _retryMax, mode,
-                   _invert ? "true" : "false",
-                   _echoCancel ? "true" : "false");
-
-        if (mode == KLINE_FAST_INIT || mode == KLINE_AUTO_DETECT) {
-            res = _fastInit();
-            if (res == KLINE_OK) {
-                _initialized = true;
-                Logger.log(LOG_INFO, "KLine", "Fast Init OK");
-                return KLINE_OK;
+    // Retry loop with current invert setting, then try opposite invert setting if AUTO_DETECT
+    for (uint8_t pass = 0; pass < (mode == KLINE_AUTO_DETECT ? 2 : 1); pass++) {
+        if (pass == 1) {
+            _invert = !_invert;
+            Logger.log(LOG_INFO, "KLine", "Auto-detect retrying with toggled invert=%s",
+                       _invert ? "true" : "false");
+            if (_serial) {
+                _serial->end();
+                _serial->begin(_baud, SERIAL_8N1, _rxPin, _txPin, _invert);
             }
         }
 
-        if (mode == KLINE_5BAUD_INIT || mode == KLINE_AUTO_DETECT) {
-            res = _5baudInit();
-            if (res == KLINE_OK) {
-                _initialized = true;
-                Logger.log(LOG_INFO, "KLine", "5-Baud Init OK");
-                return KLINE_OK;
-            }
-        }
+        for (uint8_t attempt = 0; attempt < _retryMax; attempt++) {
+            Logger.log(LOG_INFO, "KLine", "Init attempt %d/%d mode=%d invert=%s echo=%s",
+                       attempt + 1, _retryMax, mode,
+                       _invert ? "true" : "false",
+                       _echoCancel ? "true" : "false");
 
-        delay(500); // Longer inter-attempt delay for ECU recovery
+            if (mode == KLINE_FAST_INIT || mode == KLINE_AUTO_DETECT) {
+                res = _fastInit();
+                if (res == KLINE_OK) {
+                    _initialized = true;
+                    Logger.log(LOG_INFO, "KLine", "Fast Init OK (invert=%s)", _invert ? "true" : "false");
+                    return KLINE_OK;
+                }
+            }
+
+            if (mode == KLINE_5BAUD_INIT || mode == KLINE_AUTO_DETECT) {
+                res = _5baudInit();
+                if (res == KLINE_OK) {
+                    _initialized = true;
+                    Logger.log(LOG_INFO, "KLine", "5-Baud Init OK (invert=%s)", _invert ? "true" : "false");
+                    return KLINE_OK;
+                }
+            }
+
+            delay(300);
+        }
     }
 
-    Logger.log(LOG_ERROR, "KLine", "Init failed after %d retries", _retryMax);
+    _invert = originalInvert; // restore original if failed
+    Logger.log(LOG_ERROR, "KLine", "Init failed after all retries");
     return KLINE_ERR_RETRY;
 }
 
@@ -117,9 +141,12 @@ void KLineDriver::_sendWakeupPulse(uint32_t lowMs, uint32_t highMs) {
     _driveLine(true);  // K-Line HIGH (idle)
     delay(highMs);
 
-    // Re-attach TX pin to UART without calling _serial->end()
-    _serial->setPins(_rxPin, _txPin);
-    delay(15);
+    // Re-attach TX pin to ESP32 UART peripheral matrix cleanly
+    if (_serial) {
+        _serial->end();
+        _serial->begin(_baud, SERIAL_8N1, _rxPin, _txPin, _invert);
+    }
+    delay(20);
     _flush();
 }
 
@@ -137,19 +164,42 @@ KLineResult KLineDriver::_fastInit() {
     size_t  respLen = 0;
     KLineResult r;
 
+    uint8_t pgmReq[] = {0x72, 0x05, 0x71, 0x00, 0x18};
+    uint8_t hdsReq[] = {0xFE, 0x04, 0x72, 0x8C};
+
     // ========================================================
-    // Strategy 1: 70ms Wakeup + Honda PGM-FI Init
+    // Strategy 1: Direct PGM-FI Frame (no wakeup pulse)
+    // Most Honda motorcycle ECUs (CB150R) when key is ON are already awake!
     // ========================================================
-    Logger.log(LOG_INFO, "KLine", "Strategy 1: 70ms Wakeup + PGM-FI Init");
+    Logger.log(LOG_INFO, "KLine", "Strategy 1: Direct PGM-FI (no wakeup pulse)");
+    _flush();
+
+    Logger.logHex(LOG_INFO, "KLine TX (Direct PGM-FI)", pgmReq, 5);
+    _sendFrameSlow(pgmReq, 5, 2);
+    if (_echoCancel) _drainEcho(pgmReq, 5, 80);
+
+    respLen = 0;
+    r = receiveRaw(resp, respLen, 300);
+    if (r == KLINE_OK && respLen >= 2) {
+        Logger.logHex(LOG_INFO, "KLine RX (Direct Response)", resp, respLen);
+        if (validateChecksum(resp, respLen)) {
+            Logger.log(LOG_INFO, "KLine", "Strategy 1 (Direct) SUCCESS");
+            return KLINE_OK;
+        }
+        Logger.log(LOG_WARN, "KLine", "Strategy 1: ECU responded but checksum mismatch");
+    } else {
+        Logger.log(LOG_WARN, "KLine", "Strategy 1: no response");
+    }
+
+    // ========================================================
+    // Strategy 2: 70ms Wakeup + Honda PGM-FI Init
+    // ========================================================
+    Logger.log(LOG_INFO, "KLine", "Strategy 2: 70ms Wakeup + PGM-FI Init");
 
     _sendWakeupPulse(70, 130);
 
-    // Send Honda PGM-FI init frame with inter-byte timing
-    uint8_t pgmReq[] = {0x72, 0x05, 0x71, 0x00, 0x18};
     Logger.logHex(LOG_INFO, "KLine TX (PGM-FI Init)", pgmReq, 5);
-    _sendFrameSlow(pgmReq, 5, 5);
-
-    // Cancel TX echo (single-wire K-Line echoes back what we send)
+    _sendFrameSlow(pgmReq, 5, 2);
     if (_echoCancel) _drainEcho(pgmReq, 5, 80);
 
     respLen = 0;
@@ -157,25 +207,23 @@ KLineResult KLineDriver::_fastInit() {
     if (r == KLINE_OK && respLen >= 2) {
         Logger.logHex(LOG_INFO, "KLine RX (PGM-FI Response)", resp, respLen);
         if (validateChecksum(resp, respLen)) {
-            Logger.log(LOG_INFO, "KLine", "Strategy 1 SUCCESS");
+            Logger.log(LOG_INFO, "KLine", "Strategy 2 (70ms Wakeup) SUCCESS");
             return KLINE_OK;
         }
-        // Even if checksum fails, ECU responded — log it
-        Logger.log(LOG_WARN, "KLine", "Strategy 1: ECU responded but checksum mismatch");
+        Logger.log(LOG_WARN, "KLine", "Strategy 2: ECU responded but checksum mismatch");
     } else {
-        Logger.log(LOG_WARN, "KLine", "Strategy 1: no response (timeout)");
+        Logger.log(LOG_WARN, "KLine", "Strategy 2: no response");
     }
 
     // ========================================================
-    // Strategy 2: 70ms Wakeup + Honda HDS Init Frame
+    // Strategy 3: 70ms Wakeup + Honda HDS Init Frame
     // ========================================================
-    Logger.log(LOG_INFO, "KLine", "Strategy 2: 70ms Wakeup + HDS Init");
+    Logger.log(LOG_INFO, "KLine", "Strategy 3: 70ms Wakeup + HDS Init");
 
     _sendWakeupPulse(70, 130);
 
-    uint8_t hdsReq[] = {0xFE, 0x04, 0x72, 0x8C};
     Logger.logHex(LOG_INFO, "KLine TX (HDS Init)", hdsReq, 4);
-    _sendFrameSlow(hdsReq, 4, 5);
+    _sendFrameSlow(hdsReq, 4, 2);
     if (_echoCancel) _drainEcho(hdsReq, 4, 80);
 
     respLen = 0;
@@ -183,37 +231,12 @@ KLineResult KLineDriver::_fastInit() {
     if (r == KLINE_OK && respLen >= 2) {
         Logger.logHex(LOG_INFO, "KLine RX (HDS Response)", resp, respLen);
         if (validateChecksum(resp, respLen)) {
-            Logger.log(LOG_INFO, "KLine", "Strategy 2 SUCCESS");
-            return KLINE_OK;
-        }
-        Logger.log(LOG_WARN, "KLine", "Strategy 2: ECU responded but checksum mismatch");
-    } else {
-        Logger.log(LOG_WARN, "KLine", "Strategy 2: no response (timeout)");
-    }
-
-    // ========================================================
-    // Strategy 3: Direct PGM-FI Frame (no wakeup pulse)
-    // ========================================================
-    Logger.log(LOG_INFO, "KLine", "Strategy 3: Direct PGM-FI (no wakeup)");
-
-    delay(50);
-    _flush();
-
-    Logger.logHex(LOG_INFO, "KLine TX (Direct PGM-FI)", pgmReq, 5);
-    _sendFrameSlow(pgmReq, 5, 5);
-    if (_echoCancel) _drainEcho(pgmReq, 5, 80);
-
-    respLen = 0;
-    r = receiveRaw(resp, respLen, 400);
-    if (r == KLINE_OK && respLen >= 2) {
-        Logger.logHex(LOG_INFO, "KLine RX (Direct Response)", resp, respLen);
-        if (validateChecksum(resp, respLen)) {
-            Logger.log(LOG_INFO, "KLine", "Strategy 3 SUCCESS");
+            Logger.log(LOG_INFO, "KLine", "Strategy 3 (HDS Init) SUCCESS");
             return KLINE_OK;
         }
         Logger.log(LOG_WARN, "KLine", "Strategy 3: ECU responded but checksum mismatch");
     } else {
-        Logger.log(LOG_WARN, "KLine", "Strategy 3: no response (timeout)");
+        Logger.log(LOG_WARN, "KLine", "Strategy 3: no response");
     }
 
     // ========================================================
@@ -223,15 +246,14 @@ KLineResult KLineDriver::_fastInit() {
 
     _sendWakeupPulse(25, 25);
 
-    // ISO 14230 StartCommunication: C1 33 F1 81 + checksum
     uint8_t isoReq[] = {0xC1, 0x33, 0xF1, 0x81};
-    uint8_t chk      = calcChecksum(isoReq, 4);
+    uint8_t chk      = calcHondaChecksum(isoReq, 4);
     uint8_t isoFrame[5];
     memcpy(isoFrame, isoReq, 4);
     isoFrame[4] = chk;
 
     Logger.logHex(LOG_INFO, "KLine TX (ISO 14230 Init)", isoFrame, 5);
-    _sendFrameSlow(isoFrame, 5, 5);
+    _sendFrameSlow(isoFrame, 5, 2);
     if (_echoCancel) _drainEcho(isoFrame, 5, 80);
 
     respLen = 0;
@@ -244,7 +266,7 @@ KLineResult KLineDriver::_fastInit() {
         }
         Logger.log(LOG_WARN, "KLine", "Strategy 4: ECU responded but checksum mismatch");
     } else {
-        Logger.log(LOG_WARN, "KLine", "Strategy 4: no response (timeout)");
+        Logger.log(LOG_WARN, "KLine", "Strategy 4: no response");
     }
 
     Logger.log(LOG_WARN, "KLine", "Fast Init failed: no valid response from any strategy");
@@ -360,24 +382,19 @@ void KLineDriver::_bitBangByte(uint8_t byte, uint32_t baud) {
 void KLineDriver::_drainEcho(const uint8_t* sentData, size_t len, uint32_t timeoutMs) {
     if (!_serial || !sentData || len == 0) return;
 
-    // Small delay to let echo bytes arrive in UART buffer
-    delay(5);
-
     uint32_t start = millis();
     size_t drained = 0;
 
     while (drained < len && (millis() - start < timeoutMs)) {
         if (_serial->available()) {
-            uint8_t b = _serial->read();
+            uint8_t b = (uint8_t)_serial->peek();
 
-            // Compare incoming byte with expected transmitted echo byte
             if (b == sentData[drained]) {
+                _serial->read(); // Confirm and remove verified echo byte
                 drained++;
+                start = millis();
             } else {
-                // Byte does not match echo — this could be ECU response!
-                // Push it back... but we can't on HardwareSerial.
-                // Log it so we know what happened.
-                Logger.log(LOG_WARN, "KLine", "Echo drain: byte %d mismatch (got 0x%02X, expected 0x%02X)",
+                Logger.log(LOG_DEBUG, "KLine", "Echo drain stopped at byte %d (got 0x%02X, expected 0x%02X)",
                            drained, b, sentData[drained]);
                 break;
             }
@@ -414,6 +431,7 @@ KLineResult KLineDriver::receiveRaw(uint8_t* buf, size_t& len, uint32_t timeoutM
     if (!_serial) return KLINE_ERR_GENERAL;
 
     uint32_t start = millis();
+    uint32_t lastByteTime = millis();
     bool receivingStarted = false;
 
     while (millis() - start < timeoutMs) {
@@ -421,8 +439,6 @@ KLineResult KLineDriver::receiveRaw(uint8_t* buf, size_t& len, uint32_t timeoutM
         if (_serial->available()) {
             uint8_t b = _serial->read();
 
-            // Only skip leading 0x00 (break condition noise)
-            // Do NOT skip 0xFF — it's a valid byte in many protocols
             if (!receivingStarted && b == 0x00) {
                 Logger.log(LOG_DEBUG, "KLine", "Skipping leading 0x00 noise");
                 continue;
@@ -431,9 +447,13 @@ KLineResult KLineDriver::receiveRaw(uint8_t* buf, size_t& len, uint32_t timeoutM
             receivingStarted = true;
             buf[len++] = b;
 
-            // Reset timeout on each received byte (inter-byte gap detection)
-            start = millis();
+            lastByteTime = millis();
             if (len >= 255) break;
+        } else {
+            if (receivingStarted && (millis() - lastByteTime > 35)) {
+                // Inter-byte gap > 35ms means ECU frame is complete
+                break;
+            }
         }
         yield();
     }
@@ -482,11 +502,17 @@ KLineResult KLineDriver::request(const uint8_t* req, size_t reqLen,
     return KLINE_ERR_RETRY;
 }
 
-// ---- calcChecksum (sum mod 256) ----
+// ---- calcChecksum (Honda 2's complement) ----
 uint8_t KLineDriver::calcChecksum(const uint8_t* data, size_t len) {
+    return calcHondaChecksum(data, len);
+}
+
+// ---- calcHondaChecksum ----
+uint8_t KLineDriver::calcHondaChecksum(const uint8_t* data, size_t len) {
+    if (!data || len == 0) return 0;
     uint16_t sum = 0;
     for (size_t i = 0; i < len; i++) sum += data[i];
-    return (uint8_t)(sum & 0xFF);
+    return (uint8_t)((0x100 - (sum & 0xFF)) & 0xFF);
 }
 
 // ---- validateChecksum ----
@@ -510,4 +536,47 @@ void KLineDriver::_flush() {
     if (_serial) {
         while (_serial->available()) _serial->read();
     }
+}
+
+// ---- testHardware ----
+void KLineDriver::testHardware() {
+    Logger.log(LOG_INFO, "Diag", "=== START HARDWARE DIAGNOSTIC ===");
+
+    if (_serial) _serial->end();
+
+    pinMode(_txPin, OUTPUT);
+    pinMode(_rxPin, INPUT);
+
+#ifdef KLINE_DTR_PIN
+    pinMode(KLINE_DTR_PIN, OUTPUT);
+    digitalWrite(KLINE_DTR_PIN, HIGH);
+#endif
+
+    // Test TX HIGH
+    digitalWrite(_txPin, HIGH);
+    delay(20);
+    int rxState1 = digitalRead(_rxPin);
+
+    // Test TX LOW
+    digitalWrite(_txPin, LOW);
+    delay(20);
+    int rxState2 = digitalRead(_rxPin);
+
+    Logger.log(LOG_INFO, "Diag", "TX Pin %d HIGH -> RX Pin %d reads %s", _txPin, _rxPin, rxState1 ? "HIGH" : "LOW");
+    Logger.log(LOG_INFO, "Diag", "TX Pin %d LOW  -> RX Pin %d reads %s", _txPin, _rxPin, rxState2 ? "HIGH" : "LOW");
+
+    if (rxState1 == rxState2) {
+        Logger.log(LOG_ERROR, "Diag", ">>> HARDWARE FAILURE: RX Pin %d is STUCK at %s! <<<", _rxPin, rxState1 ? "HIGH" : "LOW");
+        Logger.log(LOG_ERROR, "Diag", "  1. Check Pull-up Resistor (4.7k) on 4N35 Pin 5 Collector");
+        Logger.log(LOG_ERROR, "Diag", "  2. Check GND Wire Connection between ESP32 and Bike/OBD");
+        Logger.log(LOG_ERROR, "Diag", "  3. Check 4N35 Pin 6 is DISCONNECTED (NC)");
+    } else {
+        Logger.log(LOG_INFO, "Diag", ">>> HARDWARE PASSED: Signal toggles OK (Inverted=%s) <<<",
+                   (rxState1 == LOW && rxState2 == HIGH) ? "YES" : "NO");
+    }
+
+    if (_serial) {
+        _serial->begin(_baud, SERIAL_8N1, _rxPin, _txPin, _invert);
+    }
+    Logger.log(LOG_INFO, "Diag", "=== END HARDWARE DIAGNOSTIC ===");
 }

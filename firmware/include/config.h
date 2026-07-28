@@ -29,6 +29,8 @@
 // --- K-Line UART ---
 #define KLINE_TX_PIN     17
 #define KLINE_RX_PIN     16
+#define KLINE_DTR_PIN    19   // DTR pin (GPIO 19)
+#define KLINE_CTS_PIN    18   // CTS / CTR pin (GPIO 18)
 #define KLINE_UART_NUM   UART_NUM_2   // Serial2
 #define KLINE_BAUD       10400
 #define KLINE_TIMEOUT_MS 1000

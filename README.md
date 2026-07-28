@@ -102,8 +102,8 @@ ESP32 DOIT V1
   GPIO17 (TX) ──[ 1kΩ ]──[ LED IN 4N35 #1 ]── GND      ← K-Line TX
   GPIO16 (RX) ──────────[ Collector 4N35 #1 ]── [ 4.7kΩ Pull-up → 5V ]
                                       │
-  GPIO18 (DTR)──[ 1kΩ ]──[ LED IN 4N35 #2 ]── GND      ← TX Enable Gate
-  GPIO19 (CTS)──────────[ Collector 4N35 #2 ]── [ 4.7kΩ Pull-up → 5V ]
+  GPIO19 (DTR)──[ 1kΩ ]──[ LED IN 4N35 #2 ]── GND      ← TX Enable Gate
+  GPIO18 (CTS)──────────[ Collector 4N35 #2 ]── [ 4.7kΩ Pull-up → 5V ]
                                       │
   GPIO34 (ADC)──[ 33kΩ ]──┬──[ 10kΩ ]──GND              ← Voltage monitor
                            └── GPIO34
@@ -119,13 +119,13 @@ ESP32 DOIT V1
   Pin 5 (Collector)→ K-Line (Honda OBD) & GPIO16 (RX)
   Pin 5 juga       → 4.7kΩ Pull-up → 5V
 
-4N35 #2 — DTR / CTS (Flow Control Path) ← BARU
+4N35 #2 — DTR / CTS (Flow Control Path)
 ─────────────────────────────────────────────────────
-  Pin 1 (Anode)    ← 1kΩ ← GPIO18 (DTR) ESP32
+  Pin 1 (Anode)    ← 1kΩ ← GPIO19 (DTR) ESP32
   Pin 2 (Cathode)  → GND
   Pin 4 (Emitter)  → GND
   Pin 5 (Collector)→ Terhubung ke K-Line bus SETELAH 4N35 #1
-  Pin 5 juga       → 4.7kΩ Pull-up → 5V → GPIO19 (CTS) ESP32
+  Pin 5 juga       → 4.7kΩ Pull-up → 5V → GPIO18 (CTS) ESP32
 
 Voltage Divider RX (5V → 3.3V)
 ─────────────────────────────────────────────────────

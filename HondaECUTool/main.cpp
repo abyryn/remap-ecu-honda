@@ -97,6 +97,9 @@ void setup() {
                Settings.get().invertKLine ? "YES" : "NO",
                Settings.get().echoCancel ? "YES" : "NO");
 
+    // Run hardware diagnostic test
+    KLine.testHardware();
+
     // --- Web Server + WebSocket ---
     WebSrv.begin();
 
