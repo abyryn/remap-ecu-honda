@@ -12,7 +12,7 @@ FileSystemClass::FileSystemClass() : _mounted(false) {}
 bool FileSystemClass::begin() {
     if (!LittleFS.begin(true)) {  // true = format on fail
         Serial.println("[FS] LittleFS mount failed");
-        return false;
+        return false;   
     }
     _mounted = true;
     // Ensure required directories exist by creating placeholder files
